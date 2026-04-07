@@ -36,7 +36,20 @@ class ReportStatus(str, Enum):
     DRAFT = "草稿"
     PENDING_CITY_REVIEW = "待市审核"
     CITY_REJECTED = "市退回"
+    CITY_APPROVED = "待省审核"
     PROVINCE_REJECTED = "省退回"
+    PROVINCE_APPROVED = "省审核通过"
+    PROVINCE_SUBMITTED = "省已上报"
+
+
+class SurveyPeriodType(str, Enum):
+    MONTH = "MONTH"
+    HALF_MONTH = "HALF_MONTH"
+
+
+class SurveyPeriodStatus(str, Enum):
+    ENABLED = "启用"
+    DISABLED = "停用"
 
 
 class User(Base):
@@ -47,6 +60,7 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[UserRole] = mapped_column(SqlEnum(UserRole), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    city_code: Mapped[str | None] = mapped_column(String(32), nullable=True, index=True)
     enterprise_id: Mapped[int | None] = mapped_column(ForeignKey("enterprises.id"), nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
@@ -75,6 +89,8 @@ class Enterprise(Base):
     phone: Mapped[str | None] = mapped_column(String(20), nullable=True)
     fax: Mapped[str | None] = mapped_column(String(20), nullable=True)
     email: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    city_code: Mapped[str | None] = mapped_column(String(32), nullable=True, index=True)
+    city_name: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     filing_status: Mapped[FilingStatus] = mapped_column(
         SqlEnum(FilingStatus),
@@ -99,13 +115,45 @@ class Enterprise(Base):
     reports = relationship("EmploymentReport", back_populates="enterprise", cascade="all, delete-orphan")
 
 
+class SurveyPeriod(Base):
+    __tablename__ = "survey_periods"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    period_code: Mapped[str] = mapped_column(String(32), unique=True, nullable=False, index=True)
+    period_name: Mapped[str] = mapped_column(String(64), nullable=False)
+    start_time: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
+    end_time: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
+    period_type: Mapped[SurveyPeriodType] = mapped_column(SqlEnum(SurveyPeriodType), nullable=False)
+    month_no: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    half_no: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    status: Mapped[SurveyPeriodStatus] = mapped_column(
+        SqlEnum(SurveyPeriodStatus),
+        nullable=False,
+        default=SurveyPeriodStatus.ENABLED,
+        index=True,
+    )
+    created_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    updated_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+    )
+
+    reports = relationship("EmploymentReport", back_populates="survey_period")
+
+
 class EmploymentReport(Base):
     __tablename__ = "employment_reports"
-    __table_args__ = (UniqueConstraint("enterprise_id", "survey_year", name="uq_report_enterprise_year"),)
+    __table_args__ = (UniqueConstraint("enterprise_id", "survey_period_id", name="uq_report_enterprise_period"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     enterprise_id: Mapped[int] = mapped_column(ForeignKey("enterprises.id"), nullable=False, index=True)
-    survey_year: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    survey_period_id: Mapped[int] = mapped_column(ForeignKey("survey_periods.id"), nullable=False, index=True)
+    period_code: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
 
     base_employment: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     survey_employment: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
@@ -123,6 +171,8 @@ class EmploymentReport(Base):
     )
     updated_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     last_submitted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    city_reviewed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    province_reviewed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
@@ -133,10 +183,27 @@ class EmploymentReport(Base):
     )
 
     enterprise = relationship("Enterprise", back_populates="reports")
+    survey_period = relationship("SurveyPeriod", back_populates="reports")
+    versions = relationship("ReportVersion", back_populates="report", cascade="all, delete-orphan")
 
     @property
     def decrease_count(self) -> int:
         return max(self.base_employment - self.survey_employment, 0)
+
+
+class ReportVersion(Base):
+    __tablename__ = "report_versions"
+    __table_args__ = (UniqueConstraint("report_id", "version_no", name="uq_report_version_no"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    report_id: Mapped[int] = mapped_column(ForeignKey("employment_reports.id"), nullable=False, index=True)
+    version_no: Mapped[int] = mapped_column(Integer, nullable=False)
+    action_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    operator_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    snapshot: Mapped[dict] = mapped_column(JSON, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+
+    report = relationship("EmploymentReport", back_populates="versions")
 
 
 class AuditLog(Base):

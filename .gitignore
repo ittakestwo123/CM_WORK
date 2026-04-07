@@ -12,3 +12,4 @@ test_week1.db
 .ruff_cache/
 .DS_Store
 Thumbs.db
+test_week2.db

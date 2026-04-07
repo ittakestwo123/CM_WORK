@@ -4,7 +4,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
-from .models import FilingStatus, ReportStatus, UserRole
+from .models import FilingStatus, ReportStatus, SurveyPeriodStatus, SurveyPeriodType, UserRole
 
 
 class LoginIn(BaseModel):
@@ -24,6 +24,7 @@ class UserOut(BaseModel):
     username: str
     role: UserRole
     is_active: bool
+    city_code: str | None
     enterprise_id: int | None
 
     model_config = ConfigDict(from_attributes=True)
@@ -56,6 +57,8 @@ class FilingOut(BaseModel):
     phone: str | None
     fax: str | None
     email: str | None
+    city_code: str | None
+    city_name: str | None
     filing_status: FilingStatus
     filing_reject_reason: str | None
     filing_submit_time: datetime | None
@@ -68,8 +71,33 @@ class FilingReviewIn(BaseModel):
     reason: str | None = Field(default=None, max_length=255)
 
 
+class SurveyPeriodUpsertIn(BaseModel):
+    period_code: str = Field(min_length=4, max_length=32)
+    period_name: str = Field(min_length=2, max_length=64)
+    start_time: datetime
+    end_time: datetime
+    period_type: SurveyPeriodType
+    month_no: int = Field(ge=1, le=12)
+    half_no: int | None = Field(default=None, ge=1, le=2)
+    status: SurveyPeriodStatus = SurveyPeriodStatus.ENABLED
+
+
+class SurveyPeriodOut(BaseModel):
+    id: int
+    period_code: str
+    period_name: str
+    start_time: datetime
+    end_time: datetime
+    period_type: SurveyPeriodType
+    month_no: int
+    half_no: int | None
+    status: SurveyPeriodStatus
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class ReportPayload(BaseModel):
-    survey_year: int = Field(ge=2000, le=2100)
+    period_code: str = Field(min_length=4, max_length=32)
     base_employment: int = Field(ge=0)
     survey_employment: int = Field(ge=0)
     decrease_type: str | None = Field(default=None, max_length=64)
@@ -81,7 +109,10 @@ class ReportPayload(BaseModel):
 class ReportOut(BaseModel):
     id: int
     enterprise_id: int
-    survey_year: int
+    survey_period_id: int
+    period_code: str
+    period_name: str | None = None
+    period_type: SurveyPeriodType | None = None
     base_employment: int
     survey_employment: int
     decrease_type: str | None
@@ -97,6 +128,18 @@ class ReportOut(BaseModel):
 
 class ReportReviewIn(BaseModel):
     reason: str = Field(min_length=1, max_length=255)
+
+
+class ReportVersionOut(BaseModel):
+    id: int
+    report_id: int
+    version_no: int
+    action_type: str
+    operator_id: int | None
+    snapshot: dict
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AuditLogOut(BaseModel):

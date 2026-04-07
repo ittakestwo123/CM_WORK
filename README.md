@@ -1,48 +1,48 @@
-# CM_WORK - 第一周基线实现
+# CM_WORK - 第二周迭代版本
 
 ## 项目简介
-本项目是根据需求规格说明书实现的就业调查管理系统第一周版本（P0 核心闭环）。
+本项目是云南省企业就业失业数据采集系统的课程迭代实现。
+当前版本为第二周，重点完成：
+- 调查期管理（支持 1/2/3 月半月报，其他月份月报）
+- 企业按调查期填报
+- 市级审核 + 省级审核 + 省级上报的完整状态流转
+- 审计日志与报表版本留痕
 
-第一周目标：打通企业备案 + 数据填报的最小可用流程。
+## 第二周核心能力
 
-## 第一周已实现能力
-
-### 1) 认证与会话
+### 1) 认证与权限
 - 企业、市级、省级账号登录
 - JWT 鉴权
-- 账号启用/禁用状态校验
-- 按角色返回工作台入口
+- RBAC 角色控制
+- 市级按 city_code 执行辖区数据隔离
 
-### 2) 企业备案
-- 企业填写并提交备案信息
-- 组织机构代码唯一性校验
-- 提交后备案状态流转为：待备案
+### 2) 调查期管理
+- 省级可新增、修改调查期
+- 支持字段：period_code、period_name、start_time、end_time、period_type、month_no、half_no、status
+- 规则校验：
+  - 1/2/3 月仅 HALF_MONTH（half_no=1/2）
+  - 4-12 月仅 MONTH（half_no 为空）
+  - 每企业填报以 period_code 为准
 
-### 3) 省级备案审批
-- 省级查看备案列表与详情
-- 审核通过 / 退回
-- 退回原因必填
-- 审批动作写入审计日志
+### 3) 企业备案
+- 企业提交备案信息
+- 组织机构代码唯一校验
+- 省级审批通过/退回（退回原因必填）
 
 ### 4) 企业数据填报
 - 仅已备案企业可填报
-- 仅调查期内可填报
-- 支持暂存与上报
-- 上报后状态流转为：待市审核
+- 仅启用且当前时间处于调查期内可填报
+- 支持暂存、上报
+- 每企业每调查期唯一报表
+- 保留人数与减员原因校验
 
-### 5) 核心业务校验
-- 建档期、调查期就业人数必须为非负整数
-- 调查期小于建档期时，减少类型/原因/说明必填
-- 减少类型与原因必须匹配
-- 选择“其他”时补充说明必填
+### 5) 审核流转闭环
+- 市级：待市审核 -> 待省审核 / 市退回
+- 省级：待省审核 -> 省审核通过 / 省退回 -> 省已上报
 
-### 6) RBAC 与数据隔离
-- 企业只能操作本企业数据
-- 市级/省级按角色访问审核与查询接口
-
-### 7) 审计日志
-- 记录备案提交/审批、报表暂存/上报/退回等关键动作
-- 日志包含操作人、角色、时间、原因、前后状态与 IP
+### 6) 审计日志与留痕
+- 记录操作人、角色、时间、动作、对象、原因、前后状态、IP
+- 报表每次关键变更保存版本快照（不直接覆盖历史）
 
 ## 技术栈
 - FastAPI
@@ -53,27 +53,32 @@
 - Pydantic v2
 
 ## 项目结构
-```
+```text
 .
 ├─ app/
-│  ├─ main.py              # API 入口与核心业务逻辑
-│  ├─ models.py            # 数据模型
-│  ├─ schemas.py           # 请求/响应模型
-│  ├─ auth.py              # 认证与令牌
-│  ├─ dependencies.py      # 鉴权依赖与角色权限控制
-│  ├─ database.py          # 数据库连接与会话
-│  └─ config.py            # 配置项（调查期、密钥等）
+│  ├─ main.py
+│  ├─ models.py
+│  ├─ schemas.py
+│  ├─ auth.py
+│  ├─ dependencies.py
+│  ├─ database.py
+│  └─ config.py
 ├─ docs/
 │  ├─ week1_project_plan.md
 │  ├─ week1_gantt.mmd
 │  ├─ week1_run_guide.md
+│  ├─ week2_project_plan.md
+│  ├─ week2_run_guide.md
 │  └─ change_requests/
-│     └─ CR-2026-03-31-week1-baseline.md
+│     ├─ CR-2026-03-31-week1-baseline.md
+│     └─ CR-2026-04-07-week2-period-change.md
+├─ scripts/
+│  └─ smoke_week2.py
 ├─ requirements.txt
-└─ SRS.docx
+└─ 云南省企业就业失业数据采集系统工作说明书.doc
 ```
 
-## 运行方式
+## 快速启动
 
 ### 1. 安装依赖
 ```bash
@@ -89,33 +94,44 @@ uvicorn app.main:app --reload
 - Swagger: http://127.0.0.1:8000/docs
 - OpenAPI: http://127.0.0.1:8000/openapi.json
 
-## 环境变量
-- APP_SECRET_KEY：JWT 密钥（生产环境务必修改）
-- DATABASE_URL：数据库连接串（默认 sqlite:///./app.db）
-- SURVEY_PERIOD_START：调查期开始日期（默认 2026-03-01）
-- SURVEY_PERIOD_END：调查期结束日期（默认 2026-05-31）
-
-## 默认测试账号（启动时自动初始化）
+## 默认账号
 - 省级：province_admin / Passw0rd!
 - 市级：city_reviewer / Passw0rd!
 - 企业：enterprise_user / Passw0rd!
-- 禁用账号：disabled_user / Passw0rd!
 
-## 推荐演示流程
-1. 企业登录：POST /auth/login
-2. 企业提交备案：POST /filings/submit
-3. 省级登录：POST /auth/login
-4. 省级审批通过：POST /filings/{enterprise_id}/approve
-5. 企业暂存报表：POST /reports/save
-6. 企业上报报表：POST /reports/submit
-7. 市级退回报表：POST /reports/{report_id}/city-reject
-8. 省级查看日志：GET /audit-logs
+## 第二周关键接口
+- 调查期管理：
+  - GET /survey-periods
+  - GET /survey-periods/current
+  - POST /survey-periods
+  - PUT /survey-periods/{period_id}
+- 企业填报：
+  - GET /reports/me
+  - POST /reports/save
+  - POST /reports/submit
+- 市级审核：
+  - GET /city/reports
+  - GET /city/reports/{report_id}
+  - POST /city/reports/{report_id}/approve
+  - POST /city/reports/{report_id}/reject
+- 省级审核：
+  - GET /province/reports
+  - GET /province/reports/{report_id}
+  - POST /province/reports/{report_id}/approve
+  - POST /province/reports/{report_id}/reject
+  - POST /province/reports/{report_id}/submit
+- 留痕与日志：
+  - GET /reports/{report_id}/versions
+  - GET /audit-logs
 
-## 关键文档
-- 第一周项目计划：docs/week1_project_plan.md
-- 第一周甘特图：docs/week1_gantt.mmd
-- 第一周运行说明：docs/week1_run_guide.md
-- 第一周变更单：docs/change_requests/CR-2026-03-31-week1-baseline.md
+## 自动化冒烟
+```bash
+$env:PYTHONPATH='.'
+.venv\Scripts\python.exe scripts\smoke_week2.py
+```
+成功输出：
+SMOKE_OK: week2 closed loop verified
 
 ## 说明
-本仓库当前是第一周基线版本，后续迭代将在此基础上继续补充市级审核、省级复核、统计报表与导出等能力。
+- 第一周文档保留用于迭代历史对比。
+- 第二周文档用于当前提交。
