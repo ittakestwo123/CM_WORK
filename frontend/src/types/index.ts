@@ -1,6 +1,6 @@
 export type Role = "enterprise" | "city" | "province";
 
-export type FilingStatus = "待备案" | "已备案" | "备案退回";
+export type FilingStatus = "未备案" | "待备案" | "已备案" | "备案退回";
 
 export type ReportStatus =
   | "草稿"
@@ -10,7 +10,8 @@ export type ReportStatus =
   | "待省审"
   | "省审通过"
   | "省审退回"
-  | "已上报";
+  | "已上报"
+  | "已上报部委";
 
 export type PeriodType = "MONTH" | "HALF_MONTH";
 
@@ -25,11 +26,13 @@ export interface SurveyPeriod {
 }
 
 export interface User {
-  id: string;
+  id: number | string;
   username: string;
-  role: Role;
   name: string;
+  role: Role;
   region: string;
+  cityCode?: string | null;
+  enterpriseId?: number | null;
 }
 
 export interface EnterpriseRecord {

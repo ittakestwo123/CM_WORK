@@ -1,8 +1,9 @@
-import { LogoutOutlined } from "@ant-design/icons";
-import { Avatar, Breadcrumb, Button, Layout, Menu, Space, Typography } from "antd";
-import { useMemo } from "react";
+import { LogoutOutlined, MenuOutlined } from "@ant-design/icons";
+import { Avatar, Breadcrumb, Button, Drawer, Layout, Menu, Space, Typography } from "antd";
+import { useMemo, useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 
+import { useResponsive } from "../../hooks/useResponsive";
 import { allRoutes, roleHomePath, roleMenuItems } from "../../router/menu";
 import { useAuthStore } from "../../store/auth";
 
@@ -15,6 +16,8 @@ export function AppLayout() {
   const { user, role, logout } = useAuthStore();
 
   const selectedKeys = [location.pathname];
+  const { isMobile } = useResponsive();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const breadcrumbItems = useMemo(() => {
     const current = allRoutes.find((item) => item.path === location.pathname);
@@ -24,9 +27,8 @@ export function AppLayout() {
     ];
   }, [location.pathname, role]);
 
-  return (
-    <Layout style={{ minHeight: "100vh" }}>
-      <Sider width={248} theme="light" className="app-sider">
+  const menuNode = (
+    <>
         <div className="brand-block">
           <Title level={5} style={{ margin: 0 }}>
             云南省企业就业失业数据采集系统
@@ -39,13 +41,39 @@ export function AppLayout() {
           mode="inline"
           selectedKeys={selectedKeys}
           items={role ? roleMenuItems[role] : []}
-          onClick={({ key }) => navigate(key)}
+          onClick={({ key }) => {
+            navigate(key);
+            setMenuOpen(false);
+          }}
           style={{ borderInlineEnd: "none" }}
         />
-      </Sider>
+    </>
+  );
+
+  return (
+    <Layout style={{ minHeight: "100vh" }}>
+      {isMobile ? (
+        <Drawer
+          title="导航菜单"
+          placement="left"
+          width={280}
+          open={menuOpen}
+          onClose={() => setMenuOpen(false)}
+          bodyStyle={{ padding: 0 }}
+        >
+          {menuNode}
+        </Drawer>
+      ) : (
+        <Sider width={248} theme="light" className="app-sider">
+          {menuNode}
+        </Sider>
+      )}
       <Layout>
         <Header className="app-header">
-          <Breadcrumb items={breadcrumbItems} />
+          <Space>
+            {isMobile ? <Button icon={<MenuOutlined />} onClick={() => setMenuOpen(true)} /> : null}
+            <Breadcrumb items={breadcrumbItems} />
+          </Space>
           <Space>
             <Space size={8}>
               <Avatar style={{ background: "#3d5a80" }}>{user?.name?.slice(0, 1)}</Avatar>

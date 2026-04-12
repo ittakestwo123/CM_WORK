@@ -1,30 +1,149 @@
-import { Card, Form, Select, Space, Table, Tabs } from "antd";
-import { useState } from "react";
+import { Button, Card, Empty, Form, Input, Select, Space, Table, Tabs, message } from "antd";
+import { useEffect, useMemo, useState } from "react";
 
+import {
+  api,
+  type BackendPeriod,
+  type ProvinceCompareResp,
+  type ProvinceMultiDimResp,
+  type ProvinceTrendResp,
+} from "../../api/client";
 import { ChartCard } from "../../components/common/ChartCard";
 import { PageTitle } from "../../components/common/PageTitle";
-import { surveyPeriods } from "../../mock/data";
-
-const compareOption = {
-  tooltip: { trigger: "axis" },
-  legend: { data: ["建档期", "调查期"] },
-  xAxis: { type: "category", data: ["昆明", "曲靖", "大理", "红河", "玉溪"] },
-  yAxis: { type: "value" },
-  series: [
-    { name: "建档期", type: "line", smooth: true, data: [24000, 17000, 12000, 9800, 8800] },
-    { name: "调查期", type: "line", smooth: true, data: [23200, 16500, 12150, 9520, 8610] },
-  ],
-};
-
-const trendOption = {
-  tooltip: { trigger: "axis" },
-  xAxis: { type: "category", data: ["2026-01上", "2026-01下", "2026-02上", "2026-02下", "2026-03上", "2026-03下", "2026-04"] },
-  yAxis: { type: "value" },
-  series: [{ type: "line", smooth: true, areaStyle: {}, data: [81200, 80650, 79900, 79300, 78750, 78210, 77860] }],
-};
 
 export function ProvinceAnalysisPage() {
-  const [loading] = useState(false);
+  const [periods, setPeriods] = useState<BackendPeriod[]>([]);
+  const [periodA, setPeriodA] = useState<string | undefined>(undefined);
+  const [periodB, setPeriodB] = useState<string | undefined>(undefined);
+  const [compareDimension, setCompareDimension] = useState<"region" | "nature" | "industry">("region");
+  const [trendPeriods, setTrendPeriods] = useState<string[]>([]);
+  const [multiDimPeriod, setMultiDimPeriod] = useState<string | undefined>(undefined);
+  const [multiDimDimension, setMultiDimDimension] = useState<"region" | "nature" | "industry">("region");
+  const [multiDimCity, setMultiDimCity] = useState<string>("");
+  const [multiDimNature, setMultiDimNature] = useState<string>("");
+  const [multiDimIndustry, setMultiDimIndustry] = useState<string>("");
+  const [compareData, setCompareData] = useState<ProvinceCompareResp | null>(null);
+  const [trendData, setTrendData] = useState<ProvinceTrendResp | null>(null);
+  const [multiDimData, setMultiDimData] = useState<ProvinceMultiDimResp | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const loadCompare = async (a: string, b: string, dimension: "region" | "nature" | "industry") => {
+    try {
+      const data = await api.provinceCompare(a, b, dimension);
+      setCompareData(data);
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : "加载对比分析失败");
+      setCompareData(null);
+    }
+  };
+
+  const loadTrend = async (codes?: string[]) => {
+    try {
+      const data = await api.provinceTrend(codes);
+      setTrendData(data);
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : "加载趋势分析失败");
+      setTrendData({ points: [] });
+    }
+  };
+
+  const loadMultiDim = async (params: {
+    periodCode?: string;
+    dimension: "region" | "nature" | "industry";
+    city?: string;
+    nature?: string;
+    industry?: string;
+  }) => {
+    try {
+      const data = await api.provinceMultiDim(params);
+      setMultiDimData(data);
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : "加载多维分析失败");
+      setMultiDimData(null);
+    }
+  };
+
+  useEffect(() => {
+    const init = async () => {
+      setLoading(true);
+      try {
+        const periodList = await api.listPeriods();
+        setPeriods(periodList);
+        const a = periodList[1]?.period_code ?? periodList[0]?.period_code;
+        const b = periodList[0]?.period_code;
+        if (a && b) {
+          setPeriodA(a);
+          setPeriodB(b);
+          await loadCompare(a, b, "region");
+        }
+        const defaultTrend = periodList.slice(0, 6).map((item) => item.period_code).reverse();
+        setTrendPeriods(defaultTrend);
+        await loadTrend(defaultTrend);
+        const firstPeriod = periodList[0]?.period_code;
+        setMultiDimPeriod(firstPeriod);
+        await loadMultiDim({ periodCode: firstPeriod, dimension: "region" });
+      } catch (error) {
+        message.error(error instanceof Error ? error.message : "初始化分析页面失败");
+      } finally {
+        setLoading(false);
+      }
+    };
+    void init();
+  }, []);
+
+  const periodOptions = useMemo(
+    () => periods.map((p) => ({ value: p.period_code, label: p.period_name })),
+    [periods],
+  );
+
+  const compareOption = useMemo(
+    () => ({
+      tooltip: { trigger: "axis" },
+      legend: { data: ["调查期A", "调查期B"] },
+      xAxis: { type: "category", data: (compareData?.by_city ?? []).map((item) => item.city) },
+      yAxis: { type: "value" },
+      series: [
+        {
+          name: "调查期A",
+          type: "line",
+          smooth: true,
+          data: (compareData?.by_city ?? []).map((item) => item.survey_a),
+        },
+        {
+          name: "调查期B",
+          type: "line",
+          smooth: true,
+          data: (compareData?.by_city ?? []).map((item) => item.survey_b),
+        },
+      ],
+    }),
+    [compareData],
+  );
+
+  const trendOption = useMemo(
+    () => ({
+      tooltip: { trigger: "axis" },
+      xAxis: { type: "category", data: (trendData?.points ?? []).map((item) => item.period_name) },
+      yAxis: { type: "value", axisLabel: { formatter: "{value}%" } },
+      series: [{ type: "line", smooth: true, areaStyle: {}, data: (trendData?.points ?? []).map((item) => item.change_ratio) }],
+    }),
+    [trendData],
+  );
+
+  const multiDimOption = useMemo(
+    () => ({
+      tooltip: { trigger: "axis" },
+      xAxis: { type: "category", data: (multiDimData?.items ?? []).map((item) => item.value) },
+      yAxis: { type: "value" },
+      series: [
+        {
+          type: "bar",
+          data: (multiDimData?.items ?? []).map((item) => item.change_total),
+        },
+      ],
+    }),
+    [multiDimData],
+  );
 
   return (
     <Space direction="vertical" style={{ width: "100%" }} size={16}>
@@ -36,16 +155,50 @@ export function ProvinceAnalysisPage() {
             label: "对比分析",
             children: (
               <Space direction="vertical" style={{ width: "100%" }} size={16}>
-                <Card className="soft-card">
+                <Card className="soft-card" loading={loading}>
                   <Form layout="inline" style={{ rowGap: 8 }}>
                     <Form.Item label="调查期A">
-                      <Select defaultValue="202603H2" style={{ width: 180 }} options={surveyPeriods.map((p) => ({ value: p.periodCode, label: p.periodName }))} />
+                      <Select
+                        value={periodA}
+                        style={{ width: 220 }}
+                        options={periodOptions}
+                        onChange={(value) => {
+                          setPeriodA(value);
+                          if (periodB) {
+                            void loadCompare(value, periodB, compareDimension);
+                          }
+                        }}
+                      />
                     </Form.Item>
                     <Form.Item label="调查期B">
-                      <Select defaultValue="202604" style={{ width: 180 }} options={surveyPeriods.map((p) => ({ value: p.periodCode, label: p.periodName }))} />
+                      <Select
+                        value={periodB}
+                        style={{ width: 220 }}
+                        options={periodOptions}
+                        onChange={(value) => {
+                          setPeriodB(value);
+                          if (periodA) {
+                            void loadCompare(periodA, value, compareDimension);
+                          }
+                        }}
+                      />
                     </Form.Item>
                     <Form.Item label="分析维度">
-                      <Select defaultValue="region" style={{ width: 180 }} options={[{ value: "region", label: "地区" }, { value: "nature", label: "企业性质" }, { value: "industry", label: "行业" }]} />
+                      <Select
+                        value={compareDimension}
+                        style={{ width: 200 }}
+                        options={[
+                          { value: "region", label: "地区" },
+                          { value: "nature", label: "企业性质" },
+                          { value: "industry", label: "行业" },
+                        ]}
+                        onChange={(value: "region" | "nature" | "industry") => {
+                          setCompareDimension(value);
+                          if (periodA && periodB) {
+                            void loadCompare(periodA, periodB, value);
+                          }
+                        }}
+                      />
                     </Form.Item>
                   </Form>
                 </Card>
@@ -54,12 +207,13 @@ export function ProvinceAnalysisPage() {
                   <Table
                     rowKey="metric"
                     pagination={false}
-                    dataSource={[
-                      { metric: "企业总数", valueA: 279, valueB: 281, ratio: "+0.7%" },
-                      { metric: "建档期总岗位数", valueA: 81600, valueB: 81600, ratio: "0%" },
-                      { metric: "调查期总岗位数", valueA: 78210, valueB: 77860, ratio: "-0.45%" },
-                      { metric: "岗位减少总数", valueA: 3390, valueB: 3740, ratio: "+10.3%" },
-                    ]}
+                    locale={{ emptyText: <Empty description="暂无对比分析数据" /> }}
+                    dataSource={(compareData?.metrics ?? []).map((item) => ({
+                      metric: item.metric,
+                      valueA: item.value_a,
+                      valueB: item.value_b,
+                      ratio: item.ratio,
+                    }))}
                     columns={[
                       { title: "指标", dataIndex: "metric" },
                       { title: "调查期A", dataIndex: "valueA" },
@@ -76,14 +230,117 @@ export function ProvinceAnalysisPage() {
             label: "趋势分析",
             children: (
               <Space direction="vertical" style={{ width: "100%" }} size={16}>
-                <Card className="soft-card">
+                <Card className="soft-card" loading={loading}>
                   <Form layout="inline">
                     <Form.Item label="连续调查期">
-                      <Select mode="multiple" defaultValue={["202601H1", "202601H2", "202602H1", "202602H2", "202603H1", "202603H2", "202604"]} style={{ width: 520 }} options={surveyPeriods.map((p) => ({ value: p.periodCode, label: p.periodName }))} />
+                      <Select
+                        mode="multiple"
+                        value={trendPeriods}
+                        style={{ width: 520 }}
+                        options={periodOptions}
+                        onChange={(value) => {
+                          setTrendPeriods(value);
+                          void loadTrend(value);
+                        }}
+                      />
                     </Form.Item>
                   </Form>
                 </Card>
-                <ChartCard title="岗位总量趋势" option={trendOption} loading={loading} height={420} />
+                <ChartCard title="岗位变化数量占比趋势(%)" option={trendOption} loading={loading} height={420} />
+                <Card className="soft-card">
+                  <Table
+                    rowKey="period_code"
+                    pagination={false}
+                    locale={{ emptyText: <Empty description="暂无趋势数据" /> }}
+                    dataSource={(trendData?.points ?? []).map((item) => ({
+                      ...item,
+                      ratio_text: `${item.change_ratio.toFixed(2)}%`,
+                    }))}
+                    columns={[
+                      { title: "调查期", dataIndex: "period_name" },
+                      { title: "岗位变化总数", dataIndex: "change_total" },
+                      { title: "岗位变化数量占比", dataIndex: "ratio_text" },
+                    ]}
+                  />
+                </Card>
+              </Space>
+            ),
+          },
+          {
+            key: "multi",
+            label: "多维分析",
+            children: (
+              <Space direction="vertical" style={{ width: "100%" }} size={16}>
+                <Card className="soft-card" loading={loading}>
+                  <Form layout="inline" style={{ rowGap: 8 }}>
+                    <Form.Item label="调查期">
+                      <Select
+                        value={multiDimPeriod}
+                        style={{ width: 220 }}
+                        options={periodOptions}
+                        onChange={(value) => setMultiDimPeriod(value)}
+                      />
+                    </Form.Item>
+                    <Form.Item label="维度">
+                      <Select
+                        value={multiDimDimension}
+                        style={{ width: 180 }}
+                        options={[
+                          { value: "region", label: "地区" },
+                          { value: "nature", label: "企业性质" },
+                          { value: "industry", label: "行业" },
+                        ]}
+                        onChange={(value: "region" | "nature" | "industry") => setMultiDimDimension(value)}
+                      />
+                    </Form.Item>
+                    <Form.Item label="地区筛选">
+                      <Input value={multiDimCity} onChange={(e) => setMultiDimCity(e.target.value)} placeholder="可选" style={{ width: 160 }} />
+                    </Form.Item>
+                    <Form.Item label="企业性质筛选">
+                      <Input value={multiDimNature} onChange={(e) => setMultiDimNature(e.target.value)} placeholder="可选" style={{ width: 160 }} />
+                    </Form.Item>
+                    <Form.Item label="行业筛选">
+                      <Input value={multiDimIndustry} onChange={(e) => setMultiDimIndustry(e.target.value)} placeholder="可选" style={{ width: 160 }} />
+                    </Form.Item>
+                    <Button
+                      type="primary"
+                      onClick={() =>
+                        void loadMultiDim({
+                          periodCode: multiDimPeriod,
+                          dimension: multiDimDimension,
+                          city: multiDimCity || undefined,
+                          nature: multiDimNature || undefined,
+                          industry: multiDimIndustry || undefined,
+                        })
+                      }
+                    >
+                      查询分析
+                    </Button>
+                  </Form>
+                </Card>
+
+                <ChartCard title="多维岗位变化总数" option={multiDimOption} loading={loading} height={360} />
+
+                <Card className="soft-card">
+                  <Table
+                    rowKey="value"
+                    pagination={false}
+                    locale={{ emptyText: <Empty description="暂无多维分析数据" /> }}
+                    dataSource={(multiDimData?.items ?? []).map((item) => ({
+                      ...item,
+                      change_ratio_text: `${item.change_ratio.toFixed(2)}%`,
+                    }))}
+                    columns={[
+                      { title: "维度值", dataIndex: "value" },
+                      { title: "企业总数", dataIndex: "enterprise_count" },
+                      { title: "建档期总岗位数", dataIndex: "base_total" },
+                      { title: "调查期总岗位数", dataIndex: "survey_total" },
+                      { title: "岗位变化总数", dataIndex: "change_total" },
+                      { title: "岗位减少总数", dataIndex: "decrease_total" },
+                      { title: "岗位变化数量占比", dataIndex: "change_ratio_text" },
+                    ]}
+                  />
+                </Card>
               </Space>
             ),
           },

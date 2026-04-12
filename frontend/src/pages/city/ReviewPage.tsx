@@ -1,118 +1,162 @@
-import {
-  Alert,
-  Button,
-  Card,
-  Drawer,
-  Empty,
-  Form,
-  Input,
-  Modal,
-  Select,
-  Space,
-  Table,
-  Timeline,
-  message,
-} from "antd";
-import { useMemo, useState } from "react";
+import { Alert, Button, Card, Drawer, Empty, Form, Input, Select, Space, Table, Timeline } from "antd";
+import { useEffect, useMemo, useState } from "react";
 
+import { api, type BackendReport } from "../../api/client";
 import { PageTitle } from "../../components/common/PageTitle";
 import { StatusTag } from "../../components/common/StatusTag";
-import { reportList, surveyPeriods } from "../../mock/data";
-import type { ReportRecord } from "../../types";
+import { useResponsive } from "../../hooks/useResponsive";
+import { showActionMessage } from "../../utils/feedback";
 
 export function CityReviewPage() {
   const [filters, setFilters] = useState<Record<string, string | undefined>>({});
-  const [detail, setDetail] = useState<ReportRecord | null>(null);
-  const [rejectTarget, setRejectTarget] = useState<ReportRecord | null>(null);
+  const [detail, setDetail] = useState<BackendReport | null>(null);
+  const [rejectTarget, setRejectTarget] = useState<BackendReport | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [reports, setReports] = useState<BackendReport[]>([]);
+  const { isMobile } = useResponsive();
+
+  const loadReports = async () => {
+    setLoading(true);
+    try {
+      const data = await api.listCityReports();
+      setReports(data);
+    } catch (error) {
+      const text = error instanceof Error ? error.message : "加载市级审核列表失败";
+      showActionMessage("查询", text, "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadReports();
+  }, []);
+
+  const hasFilters = Boolean(filters.periodCode || filters.status);
 
   const data = useMemo(
     () =>
-      reportList.filter((item) => {
-        if (filters.periodCode && item.periodCode !== filters.periodCode) return false;
-        if (filters.enterpriseName && !item.enterpriseName.includes(filters.enterpriseName)) return false;
+      reports.filter((item) => {
+        if (filters.periodCode && item.period_code !== filters.periodCode) return false;
         if (filters.status && item.status !== filters.status) return false;
-        if (filters.region && !item.region.includes(filters.region)) return false;
         return true;
       }),
-    [filters],
+    [reports, filters],
   );
+
+  const periodOptions = useMemo(() => {
+    const m = new Map<string, string>();
+    reports.forEach((item) => {
+      if (!m.has(item.period_code)) m.set(item.period_code, item.period_name ?? item.period_code);
+    });
+    return Array.from(m.entries()).map(([value, label]) => ({ value, label }));
+  }, [reports]);
+
+  const onApprove = async (report: BackendReport) => {
+    try {
+      await api.cityApprove(report.id);
+      showActionMessage("审核通过", `${report.period_name ?? report.period_code}`);
+      await loadReports();
+    } catch (error) {
+      const text = error instanceof Error ? error.message : "审核失败";
+      showActionMessage("审核通过", text, "error");
+    }
+  };
 
   return (
     <Space direction="vertical" style={{ width: "100%" }} size={16}>
       <PageTitle title="数据审核" desc="市级审核本辖区企业上报数据，支持通过与退回修改。" />
-      <Card className="soft-card">
+      <Card className="soft-card" loading={loading}>
         <Form layout="inline" onValuesChange={(_, values) => setFilters(values)} style={{ rowGap: 8, marginBottom: 16 }}>
           <Form.Item label="调查期" name="periodCode">
-            <Select
-              allowClear
-              style={{ width: 200 }}
-              placeholder="请选择调查期"
-              options={surveyPeriods.map((item) => ({ value: item.periodCode, label: item.periodName }))}
-            />
-          </Form.Item>
-          <Form.Item label="企业名称" name="enterpriseName">
-            <Input style={{ width: 180 }} placeholder="请输入企业名称" />
+            <Select allowClear style={{ width: 220 }} placeholder="请选择调查期" options={periodOptions} />
           </Form.Item>
           <Form.Item label="报表状态" name="status">
             <Select
               allowClear
-              style={{ width: 160 }}
+              style={{ width: 180 }}
               placeholder="请选择状态"
-              options={["待市审", "市审通过", "市审退回", "待省审"].map((item) => ({ value: item, label: item }))}
+              options={["待市审", "市审退回", "待省审"].map((item) => ({ value: item, label: item }))}
             />
-          </Form.Item>
-          <Form.Item label="所属地区" name="region">
-            <Input style={{ width: 160 }} placeholder="请输入地区" />
           </Form.Item>
         </Form>
 
-        <Table
-          rowKey="id"
-          locale={{ emptyText: <Empty description="暂无待审核数据" /> }}
-          dataSource={data}
-          columns={[
-            { title: "企业名称", dataIndex: "enterpriseName" },
-            { title: "调查期", dataIndex: "periodName" },
-            { title: "建档期就业人数", dataIndex: "baseEmployment" },
-            {
-              title: "调查期就业人数",
-              dataIndex: "surveyEmployment",
-              render: (value: number, row) => (
-                <span style={row.surveyEmployment < row.baseEmployment * 0.9 ? { color: "#d48806", fontWeight: 600 } : {}}>{value}</span>
-              ),
-            },
-            { title: "状态", dataIndex: "status", render: (value: string) => <StatusTag status={value} /> },
-            { title: "提交时间", dataIndex: "submitTime" },
-            {
-              title: "操作",
-              render: (_, row) => (
-                <Space>
-                  <Button type="link" onClick={() => setDetail(row)}>
-                    查看详情
-                  </Button>
-                  <Button type="link" onClick={() => message.success(`已审核通过：${row.enterpriseName}`)}>
-                    审核通过
-                  </Button>
-                  <Button type="link" danger onClick={() => setRejectTarget(row)}>
-                    退回修改
-                  </Button>
+        {isMobile ? (
+          <Space direction="vertical" style={{ width: "100%" }} size={12}>
+            {data.length === 0 ? <Empty description={hasFilters ? "未查询到符合条件的数据，请调整筛选条件" : "暂无待审核数据"} /> : null}
+            {data.map((item) => (
+              <Card key={item.id} size="small" title={item.period_name ?? item.period_code}>
+                <Space direction="vertical" style={{ width: "100%" }}>
+                  <div>企业ID：{item.enterprise_id}</div>
+                  <div>建档期：{item.base_employment}</div>
+                  <div>调查期：{item.survey_employment}</div>
+                  <StatusTag status={item.status} />
+                  <Space>
+                    <Button type="link" onClick={() => setDetail(item)}>
+                      查看详情
+                    </Button>
+                    <Button type="link" onClick={() => onApprove(item)}>
+                      审核通过
+                    </Button>
+                    <Button type="link" danger onClick={() => setRejectTarget(item)}>
+                      退回修改
+                    </Button>
+                  </Space>
                 </Space>
-              ),
-            },
-          ]}
-        />
+              </Card>
+            ))}
+          </Space>
+        ) : (
+          <Table
+            rowKey="id"
+            locale={{
+              emptyText: <Empty description={hasFilters ? "未查询到符合条件的数据，请调整筛选条件" : "暂无待审核数据"} />,
+            }}
+            dataSource={data}
+            columns={[
+              { title: "企业ID", dataIndex: "enterprise_id" },
+              { title: "调查期", dataIndex: "period_name" },
+              { title: "建档期就业人数", dataIndex: "base_employment" },
+              {
+                title: "调查期就业人数",
+                dataIndex: "survey_employment",
+                render: (value: number, row) => (
+                  <span style={row.survey_employment < row.base_employment * 0.9 ? { color: "#d48806", fontWeight: 600 } : {}}>{value}</span>
+                ),
+              },
+              { title: "状态", dataIndex: "status", render: (value: string) => <StatusTag status={value} /> },
+              { title: "提交时间", dataIndex: "last_submitted_at", render: (v?: string | null) => v ?? "-" },
+              {
+                title: "操作",
+                render: (_, row) => (
+                  <Space>
+                    <Button type="link" onClick={() => setDetail(row)}>
+                      查看详情
+                    </Button>
+                    <Button type="link" onClick={() => onApprove(row)}>
+                      审核通过
+                    </Button>
+                    <Button type="link" danger onClick={() => setRejectTarget(row)}>
+                      退回修改
+                    </Button>
+                  </Space>
+                ),
+              },
+            ]}
+          />
+        )}
       </Card>
 
-      <Drawer width={560} title="报表详情" open={!!detail} onClose={() => setDetail(null)}>
+      <Drawer width={isMobile ? "100%" : 560} title="报表详情" open={!!detail} onClose={() => setDetail(null)}>
         {detail ? (
           <Space direction="vertical" style={{ width: "100%" }}>
-            {detail.surveyEmployment < detail.baseEmployment * 0.9 ? (
+            {detail.survey_employment < detail.base_employment * 0.9 ? (
               <Alert type="warning" showIcon message="检测到就业人数明显下降，请重点核查。" />
             ) : null}
             <Timeline
               items={[
                 { children: "草稿" },
-                { children: "已上报" },
+                { children: "企业上报" },
                 { children: "市级审核中" },
                 { color: "blue", children: detail.status === "市审退回" ? "市级退回" : "市级通过" },
               ]}
@@ -121,17 +165,25 @@ export function CityReviewPage() {
         ) : null}
       </Drawer>
 
-      <Modal
+      <Drawer
+        placement="bottom"
+        height={isMobile ? 280 : 320}
         open={!!rejectTarget}
         title="退回修改"
-        onCancel={() => setRejectTarget(null)}
-        footer={null}
+        onClose={() => setRejectTarget(null)}
       >
         <Form
           layout="vertical"
-          onFinish={(values) => {
-            message.info(`已退回：${rejectTarget?.enterpriseName}，原因：${values.reason}`);
-            setRejectTarget(null);
+          onFinish={async (values) => {
+            try {
+              await api.cityReject(rejectTarget!.id, values.reason);
+              showActionMessage("退回", `报表 ${rejectTarget?.id}（原因：${values.reason}）`, "warning");
+              setRejectTarget(null);
+              await loadReports();
+            } catch (error) {
+              const text = error instanceof Error ? error.message : "退回失败";
+              showActionMessage("退回", text, "error");
+            }
           }}
         >
           <Form.Item label="退回原因" name="reason" rules={[{ required: true, message: "请填写退回原因" }]}>
@@ -141,7 +193,7 @@ export function CityReviewPage() {
             确认退回
           </button>
         </Form>
-      </Modal>
+      </Drawer>
     </Space>
   );
 }

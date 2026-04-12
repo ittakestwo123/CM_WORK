@@ -46,6 +46,7 @@ export const statusColorMap: Record<string, string> = {
   省审通过: "green",
   省审退回: "red",
   已上报: "purple",
+  已上报部委: "purple",
 };
 
 const makeHalfMonthPeriods = (year: number): SurveyPeriod[] => {
@@ -231,3 +232,67 @@ export const industryOptions = [
     ],
   },
 ];
+
+export const contactAddressOptions = [
+  {
+    label: "昆明市",
+    value: "昆明市",
+    children: [
+      { label: "五华区", value: "五华区" },
+      { label: "盘龙区", value: "盘龙区" },
+      { label: "官渡区", value: "官渡区" },
+      { label: "西山区", value: "西山区" },
+    ],
+  },
+  {
+    label: "曲靖市",
+    value: "曲靖市",
+    children: [
+      { label: "麒麟区", value: "麒麟区" },
+      { label: "沾益区", value: "沾益区" },
+      { label: "马龙区", value: "马龙区" },
+    ],
+  },
+  {
+    label: "大理州",
+    value: "大理州",
+    children: [
+      { label: "大理市", value: "大理市" },
+      { label: "祥云县", value: "祥云县" },
+      { label: "弥渡县", value: "弥渡县" },
+    ],
+  },
+];
+
+export const decreaseReasonMap: Record<string, string[]> = {
+  "生产经营调整": ["订单减少", "生产线调整", "其他"],
+  "组织结构优化": ["组织精简", "岗位合并", "其他"],
+  "员工主动流动": ["个人原因离职", "退休", "其他"],
+  其他: ["其他"],
+};
+
+export const decreaseTypeOptions = Object.keys(decreaseReasonMap).map((item) => ({ value: item, label: item }));
+
+export const cityCodeOptions = [
+  { value: "530100", label: "530100 - 昆明市" },
+  { value: "530300", label: "530300 - 曲靖市" },
+  { value: "530400", label: "530400 - 玉溪市" },
+  { value: "530500", label: "530500 - 保山市" },
+  { value: "530600", label: "530600 - 昭通市" },
+  { value: "530700", label: "530700 - 丽江市" },
+  { value: "530800", label: "530800 - 普洱市" },
+  { value: "530900", label: "530900 - 临沧市" },
+  { value: "532300", label: "532300 - 楚雄州" },
+  { value: "532500", label: "532500 - 红河州" },
+  { value: "532600", label: "532600 - 文山州" },
+  { value: "532800", label: "532800 - 西双版纳州" },
+  { value: "532900", label: "532900 - 大理州" },
+  { value: "533100", label: "533100 - 德宏州" },
+  { value: "533300", label: "533300 - 怒江州" },
+  { value: "533400", label: "533400 - 迪庆州" },
+];
+
+export const noticeTextLimits = {
+  title: 50,
+  content: 1000,
+} as const;

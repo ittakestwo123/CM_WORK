@@ -14,13 +14,29 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       theme={{
         algorithm: theme.defaultAlgorithm,
         token: {
-          colorPrimary: "#3d5a80",
-          colorSuccess: "#2a9d8f",
-          colorWarning: "#e9a03b",
-          colorError: "#d64545",
+          colorPrimary: "#3e5f82",
+          colorInfo: "#4e7398",
+          colorSuccess: "#2f8f72",
+          colorWarning: "#d8912a",
+          colorError: "#c8474a",
+          colorBgLayout: "#f2f5f9",
+          colorBgContainer: "#ffffff",
+          colorBorderSecondary: "#e5ebf3",
           borderRadius: 10,
-          colorBgLayout: "#f3f6fa",
+          borderRadiusLG: 14,
+          boxShadow: "0 6px 18px rgba(48, 76, 112, 0.10)",
+          boxShadowSecondary: "0 3px 12px rgba(48, 76, 112, 0.08)",
           fontSize: 14,
+        },
+        components: {
+          Layout: {
+            headerBg: "#ffffff",
+            siderBg: "#f8fbff",
+            bodyBg: "#f2f5f9",
+          },
+          Card: {
+            headerBg: "#ffffff",
+          },
         },
       }}
     >

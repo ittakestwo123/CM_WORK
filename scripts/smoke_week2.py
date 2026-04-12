@@ -36,13 +36,13 @@ with TestClient(app) as client:
 
     # 2) Enterprise filing submit -> province approve
     filing_payload = {
-        "organization_code": "ORG2026040701",
+        "organization_code": "ORG260401",
         "name": "云南测试企业",
         "nature": "有限责任公司",
         "industry": "制造业",
         "business_scope": "生产与销售",
         "contact_person": "张三",
-        "contact_address": "云南省昆明市某路1号",
+        "contact_address": "昆明市/五华区",
         "postal_code": "650000",
         "phone": "0871-1234567",
         "fax": "0871-7654321",
@@ -71,21 +71,21 @@ with TestClient(app) as client:
 
     resp = client.post("/reports/submit", json=report_payload, headers=auth_headers(enterprise_token))
     assert resp.status_code == 200, resp.text
-    assert resp.json()["status"] == "待市审核", resp.text
+    assert resp.json()["status"] == "待市审", resp.text
 
     # 4) City approve
     resp = client.post(f"/city/reports/{report_id}/approve", headers=auth_headers(city_token))
     assert resp.status_code == 200, resp.text
-    assert resp.json()["status"] == "待省审核", resp.text
+    assert resp.json()["status"] == "待省审", resp.text
 
     # 5) Province approve + submit
     resp = client.post(f"/province/reports/{report_id}/approve", headers=auth_headers(province_token))
     assert resp.status_code == 200, resp.text
-    assert resp.json()["status"] == "省审核通过", resp.text
+    assert resp.json()["status"] == "省审通过", resp.text
 
     resp = client.post(f"/province/reports/{report_id}/submit", headers=auth_headers(province_token))
     assert resp.status_code == 200, resp.text
-    assert resp.json()["status"] == "省已上报", resp.text
+    assert resp.json()["status"] == "已上报部委", resp.text
 
     # 6) Check versions + logs
     resp = client.get(f"/reports/{report_id}/versions", headers=auth_headers(province_token))

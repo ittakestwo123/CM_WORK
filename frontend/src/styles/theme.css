@@ -2,6 +2,17 @@
   box-sizing: border-box;
 }
 
+:root {
+  --yn-primary: #3e5f82;
+  --yn-primary-hover: #315171;
+  --yn-bg: #f2f5f9;
+  --yn-surface: #ffffff;
+  --yn-surface-soft: #f8fbff;
+  --yn-border: #e5ebf3;
+  --yn-text-secondary: #6f7f92;
+  --yn-shadow: 0 8px 24px rgba(50, 78, 112, 0.08);
+}
+
 html,
 body,
 #root {
@@ -10,27 +21,29 @@ body,
   width: 100%;
   min-height: 100%;
   font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
-  background: #f3f6fa;
+  background: var(--yn-bg);
 }
 
 .app-sider {
-  border-right: 1px solid #e7ecf3;
-  background: #f8fbff !important;
+  border-right: 1px solid var(--yn-border);
+  background: var(--yn-surface-soft) !important;
 }
 
 .brand-block {
   padding: 18px 16px;
-  border-bottom: 1px solid #e7ecf3;
+  border-bottom: 1px solid var(--yn-border);
   margin-bottom: 8px;
+  background: linear-gradient(180deg, #f8fbff 0%, #f2f6fc 100%);
 }
 
 .app-header {
   padding: 0 20px !important;
-  background: #fff !important;
-  border-bottom: 1px solid #e7ecf3;
+  background: var(--yn-surface) !important;
+  border-bottom: 1px solid var(--yn-border);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  box-shadow: 0 2px 12px rgba(43, 66, 95, 0.05);
 }
 
 .app-content {
@@ -38,8 +51,13 @@ body,
 }
 
 .soft-card {
-  border: 1px solid #e8edf5;
-  box-shadow: 0 6px 20px rgba(50, 80, 120, 0.06);
+  border: 1px solid var(--yn-border);
+  box-shadow: var(--yn-shadow);
+  border-radius: 14px;
+}
+
+.soft-card .ant-card-head {
+  border-bottom: 1px solid #edf2f8;
 }
 
 .login-shell {
@@ -75,19 +93,56 @@ body,
 
 .btn-primary {
   color: #fff;
-  background: #3d5a80;
+  background: var(--yn-primary);
 }
 
 .btn-primary:hover {
-  background: #2e4f79;
+  background: var(--yn-primary-hover);
 }
 
 .btn-outline {
-  color: #3d5a80;
+  color: var(--yn-primary);
   background: #fff;
-  border-color: #bfd0e3;
+  border-color: #c6d4e4;
 }
 
 .btn-outline:hover {
-  border-color: #3d5a80;
+  border-color: var(--yn-primary);
+}
+
+.ant-breadcrumb {
+  color: var(--yn-text-secondary);
+}
+
+.ant-tag {
+  border-radius: 999px;
+}
+
+.mobile-action-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  width: 100%;
+  padding: 10px 0;
+  background: linear-gradient(to top, #ffffff, rgba(255, 255, 255, 0.85));
+}
+
+@media (max-width: 768px) {
+  .app-header {
+    padding: 0 12px !important;
+  }
+
+  .app-content {
+    padding: 12px;
+  }
+
+  .brand-block {
+    padding: 12px;
+  }
+
+  .btn-primary,
+  .btn-outline {
+    min-width: 96px;
+    height: 40px;
+  }
 }

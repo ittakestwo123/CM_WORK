@@ -1,31 +1,115 @@
-import { Card, Cascader, Col, Form, Input, Row, Space, Typography, message } from "antd";
+import { Alert, Card, Cascader, Col, Form, Input, Row, Skeleton, Space, Typography } from "antd";
+import { useEffect, useState } from "react";
 
+import { api } from "../../api/client";
+import { useResponsive } from "../../hooks/useResponsive";
 import { PageTitle } from "../../components/common/PageTitle";
-import { industryOptions, natureOptions } from "../../mock/data";
+import { contactAddressOptions, industryOptions, natureOptions } from "../../mock/data";
+import { useAuthStore } from "../../store/auth";
+import { showActionMessage } from "../../utils/feedback";
 
 const { Text } = Typography;
 
 export function EnterpriseFilingPage() {
   const [form] = Form.useForm();
+  const user = useAuthStore((state) => state.user);
+  const { isMobile } = useResponsive();
+  const [loading, setLoading] = useState(true);
+  const [alreadyFiled, setAlreadyFiled] = useState(false);
+
+  const loadFiling = async () => {
+    try {
+      const filing = await api.getMyFiling();
+      setAlreadyFiled(filing.filing_status === "已备案");
+      form.setFieldsValue({
+        region: filing.city_name ?? user?.region ?? "昆明市",
+        orgCode: filing.organization_code ?? "",
+        name: filing.name ?? "",
+        nature: filing.nature ? [filing.nature] : undefined,
+        industry: filing.industry ? [filing.industry] : undefined,
+        business: filing.business_scope ?? "",
+        contact: filing.contact_person ?? "",
+        address:
+          filing.contact_address && filing.contact_address.includes("/")
+            ? filing.contact_address.split("/")
+            : undefined,
+        zip: filing.postal_code ?? "",
+        phone: filing.phone ?? "",
+        fax: filing.fax ?? "",
+        email: filing.email ?? "",
+      });
+    } catch (error) {
+      const text = error instanceof Error ? error.message : "加载备案信息失败";
+      showActionMessage("查询", text, "warning");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadFiling();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const buildPayload = (values: Record<string, unknown>) => ({
+    organization_code: String(values.orgCode ?? "").trim(),
+    name: String(values.name ?? "").trim(),
+    nature: Array.isArray(values.nature) ? String(values.nature[values.nature.length - 1] ?? "") : String(values.nature ?? ""),
+    industry: Array.isArray(values.industry) ? String(values.industry[values.industry.length - 1] ?? "") : String(values.industry ?? ""),
+    business_scope: String(values.business ?? "").trim(),
+    contact_person: String(values.contact ?? "").trim(),
+    contact_address: Array.isArray(values.address)
+      ? values.address.map((item) => String(item).trim()).filter(Boolean).join("/")
+      : "",
+    postal_code: String(values.zip ?? "").trim(),
+    phone: String(values.phone ?? "").trim(),
+    fax: String(values.fax ?? "").trim() || undefined,
+    email: String(values.email ?? "").trim() || undefined,
+  });
 
   return (
     <Space direction="vertical" style={{ width: "100%" }} size={16}>
       <PageTitle title="企业备案信息" desc="请完整填写备案信息，可先保存草稿后再上报备案。" />
+      <Skeleton active loading={loading} paragraph={{ rows: 10 }}>
       <Card className="soft-card">
+        {alreadyFiled ? <Alert type="warning" showIcon style={{ marginBottom: 16 }} message="已完成备案，不可重复上报" /> : null}
         <Form
           form={form}
           layout="vertical"
-          initialValues={{ region: "昆明市盘龙区" }}
-          onFinish={() => message.success("已保存备案草稿")}
+          initialValues={{ region: user?.region ?? "昆明市" }}
+          onFinish={async (values) => {
+            try {
+              await api.saveFiling(buildPayload(values));
+              showActionMessage("保存", "备案草稿已保存");
+            } catch (error) {
+              const text = error instanceof Error ? error.message : "保存失败";
+              showActionMessage("保存", text, "error");
+            }
+          }}
         >
           <Row gutter={16}>
             <Col xs={24} md={12}>
               <Form.Item label="所属地区" name="region">
-                <Input disabled />
+                <Input
+                  readOnly
+                  style={{
+                    background: "#f5f6fa",
+                    borderStyle: "dashed",
+                    color: "#8c8c8c",
+                    fontWeight: 600,
+                  }}
+                />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
-              <Form.Item label="组织机构代码" name="orgCode" rules={[{ required: true, message: "请输入组织机构代码" }]}>
+              <Form.Item
+                label="组织机构代码"
+                name="orgCode"
+                rules={[
+                  { required: true, message: "请输入组织机构代码" },
+                  { pattern: /^[A-Za-z0-9]{1,9}$/, message: "仅允许字母和数字，且不超过9位" },
+                ]}
+              >
                 <Input placeholder="请输入组织机构代码" />
               </Form.Item>
             </Col>
@@ -55,8 +139,8 @@ export function EnterpriseFilingPage() {
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
-              <Form.Item label="联系地址" name="address" rules={[{ required: true, message: "请输入联系地址" }]}>
-                <Input placeholder="请输入联系地址" />
+              <Form.Item label="联系地址" name="address" rules={[{ required: true, message: "请选择两级联系地址" }]}>
+                <Cascader options={contactAddressOptions} placeholder="请选择地市/市县" />
               </Form.Item>
             </Col>
             <Col xs={24} md={8}>
@@ -78,13 +162,13 @@ export function EnterpriseFilingPage() {
               <Form.Item
                 label="EMAIL"
                 name="email"
-                rules={[{ required: true, message: "请输入邮箱" }, { type: "email", message: "邮箱格式不正确" }]}
+                rules={[{ type: "email", message: "邮箱格式不正确" }]}
               >
-                <Input placeholder="请输入邮箱" />
+                <Input placeholder="邮箱为非必填项" />
               </Form.Item>
             </Col>
           </Row>
-          <Space>
+          <Space className={isMobile ? "mobile-action-bar" : undefined}>
             <Form.Item noStyle>
               <button className="btn-outline" type="submit">
                 保存草稿
@@ -94,10 +178,21 @@ export function EnterpriseFilingPage() {
               <button
                 className="btn-primary"
                 type="button"
+                disabled={alreadyFiled}
                 onClick={() => {
+                  if (alreadyFiled) return;
                   form
                     .validateFields()
-                    .then(() => message.success("备案信息已上报"))
+                    .then(async (values) => {
+                      try {
+                        await api.submitFiling(buildPayload(values));
+                        showActionMessage("上报", "备案信息已提交");
+                        setAlreadyFiled(true);
+                      } catch (error) {
+                        const text = error instanceof Error ? error.message : "上报失败";
+                        showActionMessage("上报", text, "error");
+                      }
+                    })
                     .catch(() => undefined);
                 }}
               >
@@ -106,10 +201,11 @@ export function EnterpriseFilingPage() {
             </Form.Item>
           </Space>
           <div style={{ marginTop: 12 }}>
-            <Text type="secondary">只读字段采用灰色背景；可编辑字段支持表单校验与错误提示。</Text>
+            <Text type="secondary">所属地区字段固定只读；组织机构代码会进行唯一性校验。</Text>
           </div>
         </Form>
       </Card>
+      </Skeleton>
     </Space>
   );
 }

@@ -1,26 +1,40 @@
-import { Result } from "antd";
-import type { ReactElement } from "react";
+import { Result, Skeleton } from "antd";
+import { Suspense, lazy, type ReactElement, type ReactNode } from "react";
 import { Navigate, Outlet, createBrowserRouter } from "react-router-dom";
 
-import { AppLayout } from "../components/layout/AppLayout";
-import { LoginPage } from "../pages/auth/LoginPage";
-import { CityNoticePage } from "../pages/city/NoticePage";
-import { CityReviewPage } from "../pages/city/ReviewPage";
-import { HomePage } from "../pages/dashboard/HomePage";
-import { EnterpriseFilingPage } from "../pages/enterprise/FilingPage";
-import { EnterpriseNoticePage } from "../pages/enterprise/NoticePage";
-import { EnterpriseReportQueryPage } from "../pages/enterprise/ReportQueryPage";
-import { EnterpriseReportingPage } from "../pages/enterprise/ReportingPage";
-import { ProvinceAnalysisPage } from "../pages/province/AnalysisPage";
-import { ProvinceExportPage } from "../pages/province/ExportPage";
-import { ProvinceFilingApprovalPage } from "../pages/province/FilingApprovalPage";
-import { ProvinceNoticePage } from "../pages/province/NoticePage";
-import { ProvinceReportManagePage } from "../pages/province/ReportManagePage";
-import { ProvinceSummaryPage } from "../pages/province/SummaryPage";
-import { ProvinceSystemManagePage } from "../pages/province/SystemManagePage";
-import { PasswordPage } from "../pages/shared/PasswordPage";
 import { useAuthStore } from "../store/auth";
 import type { Role } from "../types";
+
+const AppLayout = lazy(async () => ({ default: (await import("../components/layout/AppLayout")).AppLayout }));
+const LoginPage = lazy(async () => ({ default: (await import("../pages/auth/LoginPage")).LoginPage }));
+const CityNoticePage = lazy(async () => ({ default: (await import("../pages/city/NoticePage")).CityNoticePage }));
+const CityReviewPage = lazy(async () => ({ default: (await import("../pages/city/ReviewPage")).CityReviewPage }));
+const HomePage = lazy(async () => ({ default: (await import("../pages/dashboard/HomePage")).HomePage }));
+const EnterpriseFilingPage = lazy(async () => ({ default: (await import("../pages/enterprise/FilingPage")).EnterpriseFilingPage }));
+const EnterpriseNoticePage = lazy(async () => ({ default: (await import("../pages/enterprise/NoticePage")).EnterpriseNoticePage }));
+const EnterpriseReportQueryPage = lazy(async () => ({ default: (await import("../pages/enterprise/ReportQueryPage")).EnterpriseReportQueryPage }));
+const EnterpriseReportingPage = lazy(async () => ({ default: (await import("../pages/enterprise/ReportingPage")).EnterpriseReportingPage }));
+const ProvinceAnalysisPage = lazy(async () => ({ default: (await import("../pages/province/AnalysisPage")).ProvinceAnalysisPage }));
+const ProvinceExportPage = lazy(async () => ({ default: (await import("../pages/province/ExportPage")).ProvinceExportPage }));
+const ProvinceFilingApprovalPage = lazy(async () => ({ default: (await import("../pages/province/FilingApprovalPage")).ProvinceFilingApprovalPage }));
+const ProvinceNoticePage = lazy(async () => ({ default: (await import("../pages/province/NoticePage")).ProvinceNoticePage }));
+const ProvinceReportManagePage = lazy(async () => ({ default: (await import("../pages/province/ReportManagePage")).ProvinceReportManagePage }));
+const ProvinceSamplingPage = lazy(async () => ({ default: (await import("../pages/province/SamplingPage")).ProvinceSamplingPage }));
+const ProvinceSummaryPage = lazy(async () => ({ default: (await import("../pages/province/SummaryPage")).ProvinceSummaryPage }));
+const ProvinceSystemManagePage = lazy(async () => ({ default: (await import("../pages/province/SystemManagePage")).ProvinceSystemManagePage }));
+const PasswordPage = lazy(async () => ({ default: (await import("../pages/shared/PasswordPage")).PasswordPage }));
+
+function PageLoading() {
+  return (
+    <div style={{ padding: 16 }}>
+      <Skeleton active paragraph={{ rows: 8 }} />
+    </div>
+  );
+}
+
+function LazyPage({ children }: { children: ReactNode }) {
+  return <Suspense fallback={<PageLoading />}>{children}</Suspense>;
+}
 
 function RequireAuth() {
   const token = useAuthStore((state) => state.token);
@@ -39,23 +53,43 @@ function RoleGuard({ allow, children }: { allow: Role[]; children: ReactElement 
 
 export const router = createBrowserRouter([
   { path: "/", element: <Navigate to="/login" replace /> },
-  { path: "/login", element: <LoginPage /> },
+  {
+    path: "/login",
+    element: (
+      <LazyPage>
+        <LoginPage />
+      </LazyPage>
+    ),
+  },
   {
     path: "/app",
     element: <RequireAuth />,
     children: [
       {
         path: "",
-        element: <AppLayout />,
+        element: (
+          <LazyPage>
+            <AppLayout />
+          </LazyPage>
+        ),
         children: [
           { index: true, element: <Navigate to="/app/home" replace /> },
-          { path: "home", element: <HomePage /> },
+          {
+            path: "home",
+            element: (
+              <LazyPage>
+                <HomePage />
+              </LazyPage>
+            ),
+          },
 
           {
             path: "enterprise/filing",
             element: (
               <RoleGuard allow={["enterprise"]}>
-                <EnterpriseFilingPage />
+                <LazyPage>
+                  <EnterpriseFilingPage />
+                </LazyPage>
               </RoleGuard>
             ),
           },
@@ -63,7 +97,9 @@ export const router = createBrowserRouter([
             path: "enterprise/reporting",
             element: (
               <RoleGuard allow={["enterprise"]}>
-                <EnterpriseReportingPage />
+                <LazyPage>
+                  <EnterpriseReportingPage />
+                </LazyPage>
               </RoleGuard>
             ),
           },
@@ -71,7 +107,9 @@ export const router = createBrowserRouter([
             path: "enterprise/reports",
             element: (
               <RoleGuard allow={["enterprise"]}>
-                <EnterpriseReportQueryPage />
+                <LazyPage>
+                  <EnterpriseReportQueryPage />
+                </LazyPage>
               </RoleGuard>
             ),
           },
@@ -79,7 +117,9 @@ export const router = createBrowserRouter([
             path: "enterprise/notices",
             element: (
               <RoleGuard allow={["enterprise"]}>
-                <EnterpriseNoticePage />
+                <LazyPage>
+                  <EnterpriseNoticePage />
+                </LazyPage>
               </RoleGuard>
             ),
           },
@@ -87,7 +127,9 @@ export const router = createBrowserRouter([
             path: "enterprise/password",
             element: (
               <RoleGuard allow={["enterprise"]}>
-                <PasswordPage title="企业密码修改" />
+                <LazyPage>
+                  <PasswordPage title="企业密码修改" />
+                </LazyPage>
               </RoleGuard>
             ),
           },
@@ -96,7 +138,9 @@ export const router = createBrowserRouter([
             path: "city/review",
             element: (
               <RoleGuard allow={["city"]}>
-                <CityReviewPage />
+                <LazyPage>
+                  <CityReviewPage />
+                </LazyPage>
               </RoleGuard>
             ),
           },
@@ -104,7 +148,9 @@ export const router = createBrowserRouter([
             path: "city/notices",
             element: (
               <RoleGuard allow={["city"]}>
-                <CityNoticePage />
+                <LazyPage>
+                  <CityNoticePage />
+                </LazyPage>
               </RoleGuard>
             ),
           },
@@ -112,7 +158,9 @@ export const router = createBrowserRouter([
             path: "city/password",
             element: (
               <RoleGuard allow={["city"]}>
-                <PasswordPage title="市级密码修改" />
+                <LazyPage>
+                  <PasswordPage title="市级密码修改" />
+                </LazyPage>
               </RoleGuard>
             ),
           },
@@ -121,7 +169,9 @@ export const router = createBrowserRouter([
             path: "province/filing-approval",
             element: (
               <RoleGuard allow={["province"]}>
-                <ProvinceFilingApprovalPage />
+                <LazyPage>
+                  <ProvinceFilingApprovalPage />
+                </LazyPage>
               </RoleGuard>
             ),
           },
@@ -129,7 +179,9 @@ export const router = createBrowserRouter([
             path: "province/report-manage",
             element: (
               <RoleGuard allow={["province"]}>
-                <ProvinceReportManagePage />
+                <LazyPage>
+                  <ProvinceReportManagePage />
+                </LazyPage>
               </RoleGuard>
             ),
           },
@@ -137,7 +189,9 @@ export const router = createBrowserRouter([
             path: "province/summary",
             element: (
               <RoleGuard allow={["province"]}>
-                <ProvinceSummaryPage />
+                <LazyPage>
+                  <ProvinceSummaryPage />
+                </LazyPage>
               </RoleGuard>
             ),
           },
@@ -145,7 +199,19 @@ export const router = createBrowserRouter([
             path: "province/analysis",
             element: (
               <RoleGuard allow={["province"]}>
-                <ProvinceAnalysisPage />
+                <LazyPage>
+                  <ProvinceAnalysisPage />
+                </LazyPage>
+              </RoleGuard>
+            ),
+          },
+          {
+            path: "province/sampling",
+            element: (
+              <RoleGuard allow={["province"]}>
+                <LazyPage>
+                  <ProvinceSamplingPage />
+                </LazyPage>
               </RoleGuard>
             ),
           },
@@ -153,7 +219,9 @@ export const router = createBrowserRouter([
             path: "province/export",
             element: (
               <RoleGuard allow={["province"]}>
-                <ProvinceExportPage />
+                <LazyPage>
+                  <ProvinceExportPage />
+                </LazyPage>
               </RoleGuard>
             ),
           },
@@ -161,7 +229,9 @@ export const router = createBrowserRouter([
             path: "province/notices",
             element: (
               <RoleGuard allow={["province"]}>
-                <ProvinceNoticePage />
+                <LazyPage>
+                  <ProvinceNoticePage />
+                </LazyPage>
               </RoleGuard>
             ),
           },
@@ -169,7 +239,9 @@ export const router = createBrowserRouter([
             path: "province/system",
             element: (
               <RoleGuard allow={["province"]}>
-                <ProvinceSystemManagePage />
+                <LazyPage>
+                  <ProvinceSystemManagePage />
+                </LazyPage>
               </RoleGuard>
             ),
           },
