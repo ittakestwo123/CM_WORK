@@ -13,7 +13,7 @@ export function StatGrid({ items }: Props) {
     <Row gutter={[16, 16]}>
       {items.map((item) => (
         <Col xs={24} sm={12} lg={6} key={item.title}>
-          <Card className="soft-card">
+          <Card className="soft-card metric-card">
             <Statistic title={item.title} value={item.value} suffix={item.suffix} />
             {item.trend ? <Text type="secondary">{item.trend}</Text> : null}
           </Card>

@@ -1,7 +1,7 @@
 import { Alert, Card, Cascader, Col, Form, Input, Row, Skeleton, Space, Typography } from "antd";
 import { useEffect, useState } from "react";
 
-import { api } from "../../api/client";
+import { api, type BackendFiling } from "../../api/client";
 import { useResponsive } from "../../hooks/useResponsive";
 import { PageTitle } from "../../components/common/PageTitle";
 import { contactAddressOptions, industryOptions, natureOptions } from "../../mock/data";
@@ -15,12 +15,14 @@ export function EnterpriseFilingPage() {
   const user = useAuthStore((state) => state.user);
   const { isMobile } = useResponsive();
   const [loading, setLoading] = useState(true);
-  const [alreadyFiled, setAlreadyFiled] = useState(false);
+  const [filingStatus, setFilingStatus] = useState<BackendFiling["filing_status"]>("未备案");
+  const [filingRejectReason, setFilingRejectReason] = useState<string | null>(null);
 
   const loadFiling = async () => {
     try {
       const filing = await api.getMyFiling();
-      setAlreadyFiled(filing.filing_status === "已备案");
+      setFilingStatus(filing.filing_status);
+      setFilingRejectReason(filing.filing_reject_reason ?? null);
       form.setFieldsValue({
         region: filing.city_name ?? user?.region ?? "昆明市",
         orgCode: filing.organization_code ?? "",
@@ -51,6 +53,8 @@ export function EnterpriseFilingPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const submitLocked = filingStatus === "已备案" || filingStatus === "待备案";
+
   const buildPayload = (values: Record<string, unknown>) => ({
     organization_code: String(values.orgCode ?? "").trim(),
     name: String(values.name ?? "").trim(),
@@ -71,8 +75,10 @@ export function EnterpriseFilingPage() {
     <Space direction="vertical" style={{ width: "100%" }} size={16}>
       <PageTitle title="企业备案信息" desc="请完整填写备案信息，可先保存草稿后再上报备案。" />
       <Skeleton active loading={loading} paragraph={{ rows: 10 }}>
-      <Card className="soft-card">
-        {alreadyFiled ? <Alert type="warning" showIcon style={{ marginBottom: 16 }} message="已完成备案，不可重复上报" /> : null}
+      <Card className="soft-card section-card">
+        {filingStatus === "已备案" ? <Alert type="success" showIcon style={{ marginBottom: 16 }} message="企业备案已通过，可前往“数据填报”页面上报数据" /> : null}
+        {filingStatus === "待备案" ? <Alert type="info" showIcon style={{ marginBottom: 16 }} message="备案已提交，待省级审核通过后即可进行数据填报" /> : null}
+        {filingStatus === "备案退回" ? <Alert type="error" showIcon style={{ marginBottom: 16 }} message={`备案已退回：${filingRejectReason ?? "请修改后重新提交"}`} /> : null}
         <Form
           form={form}
           layout="vertical"
@@ -90,15 +96,7 @@ export function EnterpriseFilingPage() {
           <Row gutter={16}>
             <Col xs={24} md={12}>
               <Form.Item label="所属地区" name="region">
-                <Input
-                  readOnly
-                  style={{
-                    background: "#f5f6fa",
-                    borderStyle: "dashed",
-                    color: "#8c8c8c",
-                    fontWeight: 600,
-                  }}
-                />
+                <Input readOnly className="readonly-input" />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
@@ -178,16 +176,16 @@ export function EnterpriseFilingPage() {
               <button
                 className="btn-primary"
                 type="button"
-                disabled={alreadyFiled}
+                disabled={submitLocked}
                 onClick={() => {
-                  if (alreadyFiled) return;
+                  if (submitLocked) return;
                   form
                     .validateFields()
                     .then(async (values) => {
                       try {
                         await api.submitFiling(buildPayload(values));
-                        showActionMessage("上报", "备案信息已提交");
-                        setAlreadyFiled(true);
+                        showActionMessage("上报", "备案信息已提交，待省级审核");
+                        await loadFiling();
                       } catch (error) {
                         const text = error instanceof Error ? error.message : "上报失败";
                         showActionMessage("上报", text, "error");

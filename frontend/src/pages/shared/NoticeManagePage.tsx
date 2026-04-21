@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { api, type BackendNotice } from "../../api/client";
 import { PageTitle } from "../../components/common/PageTitle";
+import { StatusTag } from "../../components/common/StatusTag";
 import { noticeTextLimits } from "../../mock/data";
 
 interface Props {
@@ -89,7 +90,7 @@ export function NoticeManagePage({ title, scope, withStatus = false }: Props) {
         render: (value: string) => new Date(value).toLocaleString(),
       },
       { title: "发布单位", dataIndex: "publisher_name" },
-      ...(withStatus ? [{ title: "状态", render: () => "已发布" }] : []),
+      ...(withStatus ? [{ title: "状态", render: () => <StatusTag status="已发布" /> }] : []),
       {
         title: "操作",
         render: (_: unknown, row: BackendNotice) => (
@@ -120,7 +121,7 @@ export function NoticeManagePage({ title, scope, withStatus = false }: Props) {
     <Space direction="vertical" style={{ width: "100%" }} size={16}>
       <PageTitle title={title} desc="支持通知新增、编辑、删除。" />
       <Card
-        className="soft-card"
+        className="soft-card section-card"
         extra={
           <Button
             type="primary"

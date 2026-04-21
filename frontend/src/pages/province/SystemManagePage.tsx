@@ -15,7 +15,6 @@ import {
   Switch,
   Table,
   Tabs,
-  Tag,
 } from "antd";
 import dayjs from "dayjs";
 import { useEffect, useMemo, useState } from "react";
@@ -32,6 +31,7 @@ import {
   type SystemUserResp,
 } from "../../api/client";
 import { PageTitle } from "../../components/common/PageTitle";
+import { StatusTag } from "../../components/common/StatusTag";
 import { useResponsive } from "../../hooks/useResponsive";
 import { cityCodeOptions } from "../../mock/data";
 import { showActionMessage } from "../../utils/feedback";
@@ -225,7 +225,7 @@ export function ProvinceSystemManagePage() {
             key: "period",
             label: "上报时限",
             children: (
-              <Card className="soft-card" loading={pageLoading}>
+              <Card className="soft-card filter-panel" loading={pageLoading}>
                 <Form
                   form={periodForm}
                   layout={isMobile ? "vertical" : "inline"}
@@ -331,7 +331,7 @@ export function ProvinceSystemManagePage() {
             label: "用户管理",
             children: (
               <Card
-                className="soft-card"
+                className="soft-card section-card"
                 loading={pageLoading}
                 extra={
                   <Button
@@ -363,12 +363,12 @@ export function ProvinceSystemManagePage() {
                     {
                       title: "启用状态",
                       dataIndex: "is_active",
-                      render: (v: boolean) => <Tag color={v ? "green" : "red"}>{v ? "启用" : "停用"}</Tag>,
+                      render: (v: boolean) => <StatusTag status={v ? "启用" : "停用"} />,
                     },
                     {
                       title: "激活状态",
                       dataIndex: "is_activated",
-                      render: (v: boolean) => <Tag color={v ? "blue" : "orange"}>{v ? "已激活" : "未激活"}</Tag>,
+                      render: (v: boolean) => <StatusTag status={v ? "已激活" : "未激活"} />,
                     },
                     {
                       title: "锁定信息",
@@ -518,7 +518,7 @@ export function ProvinceSystemManagePage() {
             label: "角色管理",
             children: (
               <Card
-                className="soft-card"
+                className="soft-card section-card"
                 loading={pageLoading}
                 extra={
                   <Button
@@ -543,7 +543,7 @@ export function ProvinceSystemManagePage() {
                       render: (_, row) => (
                         <Space>
                           <span>{row.name}</span>
-                          {row.is_builtin ? <Tag color="blue">预定义</Tag> : <Tag color="purple">自定义</Tag>}
+                          {row.is_builtin ? <StatusTag status="预定义" /> : <StatusTag status="自定义" />}
                         </Space>
                       ),
                     },
@@ -721,22 +721,20 @@ export function ProvinceSystemManagePage() {
                         disabled={!autoRefresh}
                       />
                     </Space>
-                    <Tag color={monitor?.warning_level === "严重" ? "red" : monitor?.warning_level === "预警" ? "gold" : "green"}>
-                      监控状态：{monitor?.warning_level ?? "-"}
-                    </Tag>
+                    <StatusTag status={monitor?.warning_level ?? "正常"} />
                   </Space>
 
                   <Space direction="vertical" style={{ width: "100%", marginTop: 12 }} size={10}>
-                    <Card size="small" title="CPU 使用率">
+                    <Card size="small" className="section-card" title="CPU 使用率">
                       <Progress percent={monitor?.cpu_usage ?? 0} status={monitorStatus} />
                     </Card>
-                    <Card size="small" title="内存使用率">
+                    <Card size="small" className="section-card" title="内存使用率">
                       <Progress percent={monitor?.memory_usage ?? 0} status={monitorStatus} />
                     </Card>
-                    <Card size="small" title="磁盘使用率">
+                    <Card size="small" className="section-card" title="磁盘使用率">
                       <Progress percent={monitor?.disk_usage ?? 0} status={monitorStatus} />
                     </Card>
-                    <Card size="small" title="监控摘要">
+                    <Card size="small" className="section-card" title="监控摘要">
                       <Descriptions column={isMobile ? 1 : 3} size="small">
                         <Descriptions.Item label="在线用户数">{monitor?.active_users ?? 0}</Descriptions.Item>
                         <Descriptions.Item label="当前调查期待审核量">{monitor?.pending_review_count ?? 0}</Descriptions.Item>
@@ -762,13 +760,13 @@ export function ProvinceSystemManagePage() {
                       {
                         title: "预警",
                         dataIndex: "warning_level",
-                        render: (v: string) => <Tag color={v === "严重" ? "red" : v === "预警" ? "gold" : "green"}>{v}</Tag>,
+                        render: (v: string) => <StatusTag status={v} />,
                       },
                     ]}
                   />
                 </Card>
 
-                <Card className="soft-card" title="国家接口演示增强">
+                <Card className="soft-card section-card" title="国家接口演示增强">
                   <Alert
                     type="info"
                     showIcon
@@ -920,7 +918,7 @@ export function ProvinceSystemManagePage() {
                       {
                         title: "状态",
                         dataIndex: "status",
-                        render: (v: string) => <Tag color={v === "成功" ? "green" : v === "待重试" ? "gold" : "red"}>{v}</Tag>,
+                        render: (v: string) => <StatusTag status={v} />,
                       },
                       { title: "错误信息", dataIndex: "last_error_message", render: (v?: string | null) => v ?? "-" },
                       {

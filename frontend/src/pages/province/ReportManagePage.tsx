@@ -113,7 +113,7 @@ export function ProvinceReportManagePage() {
   return (
     <Space direction="vertical" style={{ width: "100%" }} size={16}>
       <PageTitle title="省级报表管理" desc="支持省审通过、退回修改、数据修订与上报部委。" />
-      <Card className="soft-card" loading={loading}>
+      <Card className="soft-card filter-panel" loading={loading}>
         <Form layout="inline" onValuesChange={(_, values) => setFilters(values)} style={{ marginBottom: 16, rowGap: 8 }}>
           <Form.Item label="调查期" name="periodCode">
             <Select allowClear style={{ width: 220 }} placeholder="请选择调查期" options={periodOptions} />
@@ -138,28 +138,28 @@ export function ProvinceReportManagePage() {
           <Space direction="vertical" style={{ width: "100%" }} size={12}>
             {data.length === 0 ? <Empty description={hasFilters ? "未查询到符合条件的数据，请调整筛选条件" : "暂无报表数据"} /> : null}
             {data.map((row) => (
-              <Card key={row.id} size="small" title={row.enterprise_name ?? `企业${row.enterprise_id}`}>
+                <Card key={row.id} size="small" className="soft-card section-card" title={row.enterprise_name ?? `企业${row.enterprise_id}`}>
                 <Space direction="vertical" style={{ width: "100%" }}>
                   <div>调查期：{row.period_name}</div>
                   <div>建档期：{row.base_employment} / 调查期：{row.survey_employment}</div>
                   <StatusTag status={row.status} />
                   <Space wrap>
-                    <Button type="link" onClick={() => setDetail(row)}>
+                      <Button size="small" onClick={() => setDetail(row)}>
                       查看
                     </Button>
-                    <Button type="link" onClick={() => onApprove(row)}>
+                      <Button size="small" type="primary" onClick={() => onApprove(row)}>
                       审核通过
                     </Button>
-                    <Button type="link" danger onClick={() => setRejectTarget(row)}>
+                      <Button size="small" onClick={() => onSubmitMinistry(row)}>
+                        上报部委
+                      </Button>
+                      <Button size="small" onClick={() => setEditTarget(row)}>
+                        数据修改
+                      </Button>
+                      <Button size="small" danger onClick={() => setRejectTarget(row)}>
                       退回修改
                     </Button>
-                    <Button type="link" onClick={() => setEditTarget(row)}>
-                      数据修改
-                    </Button>
-                    <Button type="link" onClick={() => onSubmitMinistry(row)}>
-                      上报部委
-                    </Button>
-                    <Button type="link" danger onClick={() => askDelete(row)}>
+                      <Button size="small" danger onClick={() => askDelete(row)}>
                       历史数据删除
                     </Button>
                   </Space>
@@ -185,22 +185,22 @@ export function ProvinceReportManagePage() {
                 title: "操作",
                 render: (_, row) => (
                   <Space wrap>
-                    <Button type="link" onClick={() => setDetail(row)}>
+                    <Button size="small" onClick={() => setDetail(row)}>
                       查看
                     </Button>
-                    <Button type="link" onClick={() => onApprove(row)}>
+                    <Button size="small" type="primary" onClick={() => onApprove(row)}>
                       审核通过
                     </Button>
-                    <Button type="link" danger onClick={() => setRejectTarget(row)}>
-                      退回修改
-                    </Button>
-                    <Button type="link" onClick={() => setEditTarget(row)}>
-                      数据修改
-                    </Button>
-                    <Button type="link" onClick={() => onSubmitMinistry(row)}>
+                    <Button size="small" onClick={() => onSubmitMinistry(row)}>
                       上报部委
                     </Button>
-                    <Button type="link" danger onClick={() => askDelete(row)}>
+                    <Button size="small" onClick={() => setEditTarget(row)}>
+                      数据修改
+                    </Button>
+                    <Button size="small" danger onClick={() => setRejectTarget(row)}>
+                      退回修改
+                    </Button>
+                    <Button size="small" danger onClick={() => askDelete(row)}>
                       历史数据删除
                     </Button>
                   </Space>

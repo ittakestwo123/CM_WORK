@@ -19,11 +19,16 @@ const roleButtons: Array<{ role: Role; label: string }> = [
   { role: "province", label: "省级用户" },
 ];
 
+const demoCredentialMap: Record<Role, { username: string; password: string }> = {
+  enterprise: { username: "enterprise_user", password: "Passw0rd!" },
+  city: { username: "city_reviewer", password: "Passw0rd!" },
+  province: { username: "province_admin", password: "Passw0rd!" },
+};
+
 export function LoginPage() {
   const navigate = useNavigate();
   const [form] = Form.useForm();
   const setSession = useAuthStore((state) => state.setSession);
-  const loginAsRole = useAuthStore((state) => state.loginAsRole);
   const [captcha, setCaptcha] = useState(makeCaptcha());
   const [loading, setLoading] = useState(true);
 
@@ -32,10 +37,28 @@ export function LoginPage() {
     return () => window.clearTimeout(timer);
   }, []);
 
-  const doLogin = (role: Role) => {
-    loginAsRole(role);
-    message.success(`已模拟登录为${role === "enterprise" ? "企业" : role === "city" ? "市级" : "省级"}用户`);
-    navigate(roleHomePath[role]);
+  const doLogin = async (role: Role) => {
+    try {
+      const loginResp = await api.login(demoCredentialMap[role].username, demoCredentialMap[role].password);
+      const me = await api.me(loginResp.access_token);
+      setSession({
+        token: loginResp.access_token,
+        role: loginResp.role,
+        user: {
+          id: me.id,
+          username: me.username,
+          name: me.name,
+          role: me.role,
+          region: me.region,
+          cityCode: me.city_code ?? null,
+          enterpriseId: me.enterprise_id ?? null,
+        },
+      });
+      message.success(`已登录为${role === "enterprise" ? "企业" : role === "city" ? "市级" : "省级"}演示账号`);
+      navigate(roleHomePath[loginResp.role]);
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : "模拟登录失败");
+    }
   };
 
   const refreshCaptcha = () => {
@@ -55,7 +78,7 @@ export function LoginPage() {
 
     try {
       const loginResp = await api.login(username, password);
-      const me = await api.me();
+      const me = await api.me(loginResp.access_token);
       setSession({
         token: loginResp.access_token,
         role: loginResp.role,
@@ -97,7 +120,6 @@ export function LoginPage() {
                 <Title level={3} style={{ marginBottom: 4 }}>
                   云南省企业就业失业数据采集系统
                 </Title>
-                <Text type="secondary">课程作业演示版本 · 前端高保真原型</Text>
               </Space>
 
               <Alert
@@ -134,10 +156,10 @@ export function LoginPage() {
               </Form>
 
               <Space direction="vertical" style={{ width: "100%" }}>
-                <Text type="secondary">快速角色体验（跳过账号校验）</Text>
+                <Text type="secondary">快速角色登录（使用内置演示账号）</Text>
                 <Space wrap>
                   {roleButtons.map((item) => (
-                    <Button key={item.role} onClick={() => doLogin(item.role)}>
+                    <Button key={item.role} onClick={() => void doLogin(item.role)}>
                       {item.label}
                     </Button>
                   ))}

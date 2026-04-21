@@ -1712,7 +1712,12 @@ def report_available_periods(
     if enterprise is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="企业信息不存在")
     if enterprise.filing_status != FilingStatus.APPROVED:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="请先完成企业备案")
+        if enterprise.filing_status == FilingStatus.PENDING:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="备案已提交，待省级审核通过后才能填报")
+        if enterprise.filing_status == FilingStatus.REJECTED:
+            reason = enterprise.filing_reject_reason or "请修改备案信息后重新提交"
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"备案已退回：{reason}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="请先提交备案并通过省级审核后再填报")
 
     now = datetime.utcnow()
     stmt = (

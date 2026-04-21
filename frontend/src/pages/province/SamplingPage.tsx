@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api, type BackendPeriod, type ProvinceSamplingResp } from "../../api/client";
 import { ChartCard } from "../../components/common/ChartCard";
 import { PageTitle } from "../../components/common/PageTitle";
+import { CHART_COLORS, CHART_LEGEND, CHART_TOOLTIP_ITEM } from "../../styles/chartTheme";
 
 export function ProvinceSamplingPage() {
   const [periods, setPeriods] = useState<BackendPeriod[]>([]);
@@ -52,8 +53,9 @@ export function ProvinceSamplingPage() {
 
   const pieOption = useMemo(
     () => ({
-      tooltip: { trigger: "item" },
-      legend: { orient: "vertical", left: "left" },
+      color: CHART_COLORS,
+      tooltip: CHART_TOOLTIP_ITEM,
+      legend: { ...CHART_LEGEND, orient: "vertical", left: "left" },
       series: [
         {
           name: "企业占比",
@@ -70,7 +72,7 @@ export function ProvinceSamplingPage() {
   return (
     <Space direction="vertical" style={{ width: "100%" }} size={16}>
       <PageTitle title="取样分析" desc="展示各市企业样本数量、占比与地区筛选结果。" />
-      <Card className="soft-card" loading={loading}>
+      <Card className="soft-card filter-panel" loading={loading}>
         <Form layout="inline" style={{ marginBottom: 16 }}>
           <Form.Item label="调查期">
             <Select
@@ -101,10 +103,10 @@ export function ProvinceSamplingPage() {
         </Form>
 
         <Space size={16} wrap style={{ marginBottom: 16 }}>
-          <Card size="small">
+          <Card size="small" className="soft-card metric-card">
             <Statistic title="样本企业总数" value={sampling?.total_enterprises ?? 0} suffix="家" />
           </Card>
-          <Card size="small">
+          <Card size="small" className="soft-card metric-card">
             <Statistic title="覆盖地市" value={sampling?.city_count ?? 0} suffix="个" />
           </Card>
         </Space>
@@ -124,7 +126,7 @@ export function ProvinceSamplingPage() {
           ]}
         />
       </Card>
-      <ChartCard title="各市样本占比饼图" option={pieOption} loading={loading} height={360} />
+      <ChartCard title="各市样本占比饼图" subtitle="按企业样本数量计算各地市占比" option={pieOption} loading={loading} height={360} />
     </Space>
   );
 }

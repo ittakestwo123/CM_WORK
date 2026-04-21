@@ -1,7 +1,8 @@
-import { Alert, Card, Col, Empty, List, Row, Space, Tag, Typography } from "antd";
+import { Alert, Card, Col, Empty, List, Row, Space, Typography } from "antd";
 import { useEffect, useState } from "react";
 
 import { api, type BackendNotice } from "../../api/client";
+import { StatusTag } from "../../components/common/StatusTag";
 import { useResponsive } from "../../hooks/useResponsive";
 import { PageTitle } from "../../components/common/PageTitle";
 import { StatGrid } from "../../components/common/StatGrid";
@@ -68,18 +69,41 @@ export function HomePage() {
   return (
     <Space direction="vertical" size={16} style={{ width: "100%" }}>
       <PageTitle title="工作台" desc={`欢迎，${user.name}。当前调查期：${currentPeriod}`} />
+
+      <Card className="soft-card section-card welcome-panel">
+        <Row gutter={[16, 16]} align="middle">
+          <Col xs={24} lg={17}>
+            <Space direction="vertical" size={6}>
+              <Typography.Title level={4} style={{ margin: 0 }}>
+                {role === "enterprise" ? "企业端日常工作台" : role === "city" ? "市级审核工作台" : "省级管理工作台"}
+              </Typography.Title>
+              <Text type="secondary">围绕调查期任务、待办事项和通知摘要构建，适用于答辩展示与日常演示。</Text>
+            </Space>
+          </Col>
+          <Col xs={24} lg={7}>
+            <Card size="small" className="metric-card" styles={{ body: { padding: 12 } }}>
+              <Space direction="vertical" size={4}>
+                <Text type="secondary">当前调查期</Text>
+                <Text strong>{currentPeriod}</Text>
+                <StatusTag status={unreadCount > 0 ? "未读" : "已读"} />
+              </Space>
+            </Card>
+          </Col>
+        </Row>
+      </Card>
+
       <StatGrid items={dashboardStatsByRole[role]} />
 
       <Row gutter={[16, 16]}>
         <Col xs={24} lg={11}>
-          <Card title="待办事项" className="soft-card" loading={loading}>
+          <Card title="待办事项" className="soft-card section-card" loading={loading}>
             <List
               size={isMobile ? "small" : "default"}
               dataSource={todoByRole[role]}
               renderItem={(item) => (
                 <List.Item>
                   <Space>
-                    <Tag color="blue">待办</Tag>
+                    <StatusTag status="待办" />
                     <Text>{item}</Text>
                   </Space>
                 </List.Item>
@@ -88,7 +112,7 @@ export function HomePage() {
           </Card>
         </Col>
         <Col xs={24} lg={13}>
-          <Card title="最近操作" className="soft-card" loading={loading}>
+          <Card title="最近操作" className="soft-card section-card" loading={loading}>
             <List
               dataSource={recentOps}
               size={isMobile ? "small" : "default"}
@@ -104,9 +128,9 @@ export function HomePage() {
 
       <Card
         title="通知摘要"
-        className="soft-card"
+        className="soft-card section-card"
         loading={loading}
-        extra={<Tag color={unreadCount > 0 ? "red" : "green"}>未读 {unreadCount}</Tag>}
+        extra={<StatusTag status={unreadCount > 0 ? "未读" : "已读"} />}
       >
         {unreadCount > 0 ? <Alert type="warning" showIcon style={{ marginBottom: 12 }} message={`当前有 ${unreadCount} 条未读通知，请优先处理。`} /> : null}
         {noticeList.length === 0 ? (
@@ -121,7 +145,7 @@ export function HomePage() {
                   title={
                     <Space>
                       <Text>{item.title}</Text>
-                      {item.read ? <Tag>已读</Tag> : <Tag color="red">未读</Tag>}
+                      <StatusTag status={item.read ? "已读" : "未读"} />
                     </Space>
                   }
                   description={<Text type="secondary">{new Date(item.created_at).toLocaleString()}</Text>}

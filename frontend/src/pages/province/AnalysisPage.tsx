@@ -10,6 +10,9 @@ import {
 } from "../../api/client";
 import { ChartCard } from "../../components/common/ChartCard";
 import { PageTitle } from "../../components/common/PageTitle";
+import { CHART_AXIS_LABEL, CHART_COLORS, CHART_LEGEND, CHART_SPLIT_LINE, CHART_TOOLTIP_AXIS } from "../../styles/chartTheme";
+
+const chartPalette = CHART_COLORS;
 
 export function ProvinceAnalysisPage() {
   const [periods, setPeriods] = useState<BackendPeriod[]>([]);
@@ -98,21 +101,24 @@ export function ProvinceAnalysisPage() {
 
   const compareOption = useMemo(
     () => ({
-      tooltip: { trigger: "axis" },
-      legend: { data: ["调查期A", "调查期B"] },
-      xAxis: { type: "category", data: (compareData?.by_city ?? []).map((item) => item.city) },
-      yAxis: { type: "value" },
+      color: chartPalette,
+      tooltip: CHART_TOOLTIP_AXIS,
+      legend: { ...CHART_LEGEND, data: ["调查期A", "调查期B"] },
+      xAxis: { type: "category", axisLabel: CHART_AXIS_LABEL, data: (compareData?.by_city ?? []).map((item) => item.city) },
+      yAxis: { type: "value", axisLabel: CHART_AXIS_LABEL, splitLine: CHART_SPLIT_LINE },
       series: [
         {
           name: "调查期A",
           type: "line",
           smooth: true,
+          symbolSize: 7,
           data: (compareData?.by_city ?? []).map((item) => item.survey_a),
         },
         {
           name: "调查期B",
           type: "line",
           smooth: true,
+          symbolSize: 7,
           data: (compareData?.by_city ?? []).map((item) => item.survey_b),
         },
       ],
@@ -122,22 +128,36 @@ export function ProvinceAnalysisPage() {
 
   const trendOption = useMemo(
     () => ({
-      tooltip: { trigger: "axis" },
-      xAxis: { type: "category", data: (trendData?.points ?? []).map((item) => item.period_name) },
-      yAxis: { type: "value", axisLabel: { formatter: "{value}%" } },
-      series: [{ type: "line", smooth: true, areaStyle: {}, data: (trendData?.points ?? []).map((item) => item.change_ratio) }],
+      color: [chartPalette[0]],
+      tooltip: CHART_TOOLTIP_AXIS,
+      xAxis: { type: "category", axisLabel: CHART_AXIS_LABEL, data: (trendData?.points ?? []).map((item) => item.period_name) },
+      yAxis: {
+        type: "value",
+        axisLabel: { ...CHART_AXIS_LABEL, formatter: "{value}%" },
+        splitLine: CHART_SPLIT_LINE,
+      },
+      series: [{
+        type: "line",
+        smooth: true,
+        symbolSize: 7,
+        areaStyle: { color: "rgba(47, 77, 105, 0.16)" },
+        data: (trendData?.points ?? []).map((item) => item.change_ratio),
+      }],
     }),
     [trendData],
   );
 
   const multiDimOption = useMemo(
     () => ({
-      tooltip: { trigger: "axis" },
-      xAxis: { type: "category", data: (multiDimData?.items ?? []).map((item) => item.value) },
-      yAxis: { type: "value" },
+      color: [chartPalette[1]],
+      tooltip: CHART_TOOLTIP_AXIS,
+      xAxis: { type: "category", axisLabel: CHART_AXIS_LABEL, data: (multiDimData?.items ?? []).map((item) => item.value) },
+      yAxis: { type: "value", axisLabel: CHART_AXIS_LABEL, splitLine: CHART_SPLIT_LINE },
       series: [
         {
           type: "bar",
+          barMaxWidth: 34,
+          itemStyle: { borderRadius: [6, 6, 0, 0] },
           data: (multiDimData?.items ?? []).map((item) => item.change_total),
         },
       ],
@@ -155,7 +175,7 @@ export function ProvinceAnalysisPage() {
             label: "对比分析",
             children: (
               <Space direction="vertical" style={{ width: "100%" }} size={16}>
-                <Card className="soft-card" loading={loading}>
+                <Card className="soft-card filter-panel" loading={loading}>
                   <Form layout="inline" style={{ rowGap: 8 }}>
                     <Form.Item label="调查期A">
                       <Select
@@ -202,8 +222,8 @@ export function ProvinceAnalysisPage() {
                     </Form.Item>
                   </Form>
                 </Card>
-                <ChartCard title="岗位对比趋势" option={compareOption} loading={loading} height={360} />
-                <Card className="soft-card">
+                <ChartCard title="岗位对比趋势" subtitle="对比调查期A/B在各维度的调查期岗位数" option={compareOption} loading={loading} height={360} />
+                <Card className="soft-card section-card">
                   <Table
                     rowKey="metric"
                     pagination={false}
@@ -230,7 +250,7 @@ export function ProvinceAnalysisPage() {
             label: "趋势分析",
             children: (
               <Space direction="vertical" style={{ width: "100%" }} size={16}>
-                <Card className="soft-card" loading={loading}>
+                <Card className="soft-card filter-panel" loading={loading}>
                   <Form layout="inline">
                     <Form.Item label="连续调查期">
                       <Select
@@ -246,8 +266,8 @@ export function ProvinceAnalysisPage() {
                     </Form.Item>
                   </Form>
                 </Card>
-                <ChartCard title="岗位变化数量占比趋势(%)" option={trendOption} loading={loading} height={420} />
-                <Card className="soft-card">
+                <ChartCard title="岗位变化数量占比趋势(%)" subtitle="展示连续调查期内岗位变化占比走势" option={trendOption} loading={loading} height={420} />
+                <Card className="soft-card section-card">
                   <Table
                     rowKey="period_code"
                     pagination={false}
@@ -271,7 +291,7 @@ export function ProvinceAnalysisPage() {
             label: "多维分析",
             children: (
               <Space direction="vertical" style={{ width: "100%" }} size={16}>
-                <Card className="soft-card" loading={loading}>
+                <Card className="soft-card filter-panel" loading={loading}>
                   <Form layout="inline" style={{ rowGap: 8 }}>
                     <Form.Item label="调查期">
                       <Select
@@ -319,9 +339,9 @@ export function ProvinceAnalysisPage() {
                   </Form>
                 </Card>
 
-                <ChartCard title="多维岗位变化总数" option={multiDimOption} loading={loading} height={360} />
+                <ChartCard title="多维岗位变化总数" subtitle="按维度值聚合岗位变化总量" option={multiDimOption} loading={loading} height={360} />
 
-                <Card className="soft-card">
+                <Card className="soft-card section-card">
                   <Table
                     rowKey="value"
                     pagination={false}

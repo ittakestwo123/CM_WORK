@@ -65,8 +65,8 @@ export function CityReviewPage() {
 
   return (
     <Space direction="vertical" style={{ width: "100%" }} size={16}>
-      <PageTitle title="数据审核" desc="市级审核本辖区企业上报数据，支持通过与退回修改。" />
-      <Card className="soft-card" loading={loading}>
+      <PageTitle title="数据审核" desc="市级审核本辖区企业上报数据，支持通过与退回修改。" extra={<StatusTag status="待市审" />} />
+      <Card className="soft-card filter-panel" loading={loading}>
         <Form layout="inline" onValuesChange={(_, values) => setFilters(values)} style={{ rowGap: 8, marginBottom: 16 }}>
           <Form.Item label="调查期" name="periodCode">
             <Select allowClear style={{ width: 220 }} placeholder="请选择调查期" options={periodOptions} />
@@ -85,20 +85,20 @@ export function CityReviewPage() {
           <Space direction="vertical" style={{ width: "100%" }} size={12}>
             {data.length === 0 ? <Empty description={hasFilters ? "未查询到符合条件的数据，请调整筛选条件" : "暂无待审核数据"} /> : null}
             {data.map((item) => (
-              <Card key={item.id} size="small" title={item.period_name ?? item.period_code}>
+              <Card key={item.id} size="small" className="soft-card section-card" title={item.period_name ?? item.period_code}>
                 <Space direction="vertical" style={{ width: "100%" }}>
                   <div>企业ID：{item.enterprise_id}</div>
                   <div>建档期：{item.base_employment}</div>
                   <div>调查期：{item.survey_employment}</div>
                   <StatusTag status={item.status} />
-                  <Space>
-                    <Button type="link" onClick={() => setDetail(item)}>
+                  <Space wrap>
+                    <Button size="small" onClick={() => setDetail(item)}>
                       查看详情
                     </Button>
-                    <Button type="link" onClick={() => onApprove(item)}>
+                    <Button size="small" type="primary" onClick={() => onApprove(item)}>
                       审核通过
                     </Button>
-                    <Button type="link" danger onClick={() => setRejectTarget(item)}>
+                    <Button size="small" danger onClick={() => setRejectTarget(item)}>
                       退回修改
                     </Button>
                   </Space>
@@ -130,13 +130,13 @@ export function CityReviewPage() {
                 title: "操作",
                 render: (_, row) => (
                   <Space>
-                    <Button type="link" onClick={() => setDetail(row)}>
+                    <Button size="small" onClick={() => setDetail(row)}>
                       查看详情
                     </Button>
-                    <Button type="link" onClick={() => onApprove(row)}>
+                    <Button size="small" type="primary" onClick={() => onApprove(row)}>
                       审核通过
                     </Button>
-                    <Button type="link" danger onClick={() => setRejectTarget(row)}>
+                    <Button size="small" danger onClick={() => setRejectTarget(row)}>
                       退回修改
                     </Button>
                   </Space>

@@ -13,8 +13,19 @@ function getTokenFromStorage(): string | null {
   }
 }
 
-async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
-  const token = getTokenFromStorage();
+function normalizeAuthErrorMessage(detail: string, status: number): string {
+  if (status === 401 && detail.includes("认证令牌")) {
+    localStorage.removeItem("yn-employment-frontend-auth");
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("yn-auth-expired"));
+    }
+    return "登录状态已失效，请重新登录";
+  }
+  return detail;
+}
+
+async function apiRequest<T>(path: string, init?: RequestInit, authToken?: string | null): Promise<T> {
+  const token = authToken ?? getTokenFromStorage();
   const headers = new Headers(init?.headers ?? {});
   if (!headers.has("Content-Type") && init?.body) {
     headers.set("Content-Type", "application/json");
@@ -36,7 +47,7 @@ async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
     } catch {
       // Ignore JSON parse errors for non-JSON error responses.
     }
-    throw new Error(detail);
+    throw new Error(normalizeAuthErrorMessage(detail, response.status));
   }
 
   if (response.status === 204) {
@@ -64,7 +75,7 @@ async function apiRequestBlob(path: string, init?: RequestInit): Promise<{ blob:
     } catch {
       // Ignore parse errors.
     }
-    throw new Error(detail);
+    throw new Error(normalizeAuthErrorMessage(detail, response.status));
   }
 
   const disposition = response.headers.get("Content-Disposition") ?? "";
@@ -442,7 +453,7 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ username, password }),
     }),
-  me: () => apiRequest<BackendUser>("/auth/me"),
+  me: (accessToken?: string | null) => apiRequest<BackendUser>("/auth/me", undefined, accessToken),
   changePassword: (payload: { old_password: string; new_password: string }) =>
     apiRequest<{ changed: boolean }>("/auth/change-password", { method: "POST", body: JSON.stringify(payload) }),
 

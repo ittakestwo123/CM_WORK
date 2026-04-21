@@ -1,6 +1,6 @@
 import { LogoutOutlined, MenuOutlined } from "@ant-design/icons";
 import { Avatar, Breadcrumb, Button, Drawer, Layout, Menu, Space, Typography } from "antd";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { useResponsive } from "../../hooks/useResponsive";
@@ -26,6 +26,15 @@ export function AppLayout() {
       { title: current?.label ?? "页面" },
     ];
   }, [location.pathname, role]);
+
+  useEffect(() => {
+    const onAuthExpired = () => {
+      logout();
+      navigate("/login", { replace: true });
+    };
+    window.addEventListener("yn-auth-expired", onAuthExpired);
+    return () => window.removeEventListener("yn-auth-expired", onAuthExpired);
+  }, [logout, navigate]);
 
   const menuNode = (
     <>
@@ -54,6 +63,7 @@ export function AppLayout() {
     <Layout style={{ minHeight: "100vh" }}>
       {isMobile ? (
         <Drawer
+          className="app-mobile-drawer"
           title="导航菜单"
           placement="left"
           width={280}
@@ -76,10 +86,10 @@ export function AppLayout() {
           </Space>
           <Space>
             <Space size={8}>
-              <Avatar style={{ background: "#3d5a80" }}>{user?.name?.slice(0, 1)}</Avatar>
-              <div>
-                <div style={{ lineHeight: 1.2 }}>{user?.name}</div>
-                <Text type="secondary" style={{ fontSize: 12 }}>
+              <Avatar style={{ background: "#2f4d69" }}>{user?.name?.slice(0, 1)}</Avatar>
+              <div className="user-meta-block">
+                <div className="user-meta-name">{user?.name}</div>
+                <Text type="secondary" className="user-meta-region">
                   {user?.region}
                 </Text>
               </div>

@@ -7,6 +7,7 @@ import { useResponsive } from "../../hooks/useResponsive";
 import { PageTitle } from "../../components/common/PageTitle";
 import { decreaseReasonMap, decreaseTypeOptions } from "../../mock/data";
 import { showActionMessage } from "../../utils/feedback";
+import { StatusTag } from "../../components/common/StatusTag";
 
 const { Text, Title } = Typography;
 
@@ -16,13 +17,26 @@ export function EnterpriseReportingPage() {
   const [loading, setLoading] = useState(true);
   const [periods, setPeriods] = useState<BackendPeriod[]>([]);
   const [filed, setFiled] = useState(false);
+  const [filingStatus, setFilingStatus] = useState<string>("未备案");
+  const [filingRejectReason, setFilingRejectReason] = useState<string | null>(null);
   const [existingReport, setExistingReport] = useState<BackendReport | null>(null);
 
   const loadBaseData = async () => {
     setLoading(true);
     try {
-      const [filing, currentPeriods] = await Promise.all([api.getMyFiling(), api.listAvailableReportPeriods()]);
-      setFiled(filing.filing_status === "已备案");
+      const filing = await api.getMyFiling();
+      setFilingStatus(filing.filing_status);
+      setFilingRejectReason(filing.filing_reject_reason ?? null);
+      const approved = filing.filing_status === "已备案";
+      setFiled(approved);
+
+      if (!approved) {
+        setPeriods([]);
+        setExistingReport(null);
+        return;
+      }
+
+      const currentPeriods = await api.listAvailableReportPeriods();
       setPeriods(currentPeriods);
       if (currentPeriods.length > 0) {
         form.setFieldValue("periodCode", currentPeriods[0].period_code);
@@ -101,8 +115,10 @@ export function EnterpriseReportingPage() {
 
   return (
     <Space direction="vertical" style={{ width: "100%" }} size={16}>
-      <PageTitle title="企业数据填报" desc="按调查期填报就业岗位数据，支持暂存与正式上报。" />
-      {!filed ? <Alert type="error" showIcon message="请先完成企业备案" /> : null}
+      <PageTitle title="企业数据填报" desc="按调查期填报就业岗位数据，支持暂存与正式上报。" extra={<StatusTag status={existingReport?.status ?? "草稿"} />} />
+      {filingStatus === "未备案" ? <Alert type="error" showIcon message="请先提交备案并通过省级审核后再填报" /> : null}
+      {filingStatus === "待备案" ? <Alert type="info" showIcon message="备案已提交，待省级审核通过后才可进行数据填报" /> : null}
+      {filingStatus === "备案退回" ? <Alert type="error" showIcon message={`备案已退回：${filingRejectReason ?? "请修改备案信息后重新提交"}`} /> : null}
       {filed && selectedPeriodCode && !inSurveyPeriod ? <Alert type="warning" showIcon message="不在填报期内" /> : null}
       {existingReport && !canEditCurrentPeriod ? (
         <Alert
@@ -113,7 +129,7 @@ export function EnterpriseReportingPage() {
       ) : null}
       <Row gutter={[16, 16]}>
         <Col xs={24} xl={16}>
-          <Card className="soft-card" loading={loading}>
+          <Card className="soft-card section-card" loading={loading}>
             <Form form={form} layout="vertical" initialValues={{ baseEmployment: 300, surveyEmployment: 300 }}>
               <Form.Item label="调查期" name="periodCode" rules={[{ required: true, message: "请选择调查期" }]}>
                 <Select
@@ -137,7 +153,7 @@ export function EnterpriseReportingPage() {
               </Row>
 
               {showDecrease ? (
-                <Card size="small" style={{ marginBottom: 16, borderColor: "#ffb38a", background: "#fff7f2" }}>
+                  <Card size="small" className="decrease-card">
                   <Title level={5} style={{ marginBottom: 12 }}>
                     减员信息（必填）
                   </Title>
@@ -239,7 +255,7 @@ export function EnterpriseReportingPage() {
         </Col>
         <Col xs={24} xl={8}>
           <Space direction="vertical" style={{ width: "100%" }} size={16}>
-            <Card className="soft-card" title="人数变化提示卡" loading={loading}>
+            <Card className="soft-card section-card" title="人数变化提示卡" loading={loading}>
               <Text>{changeHint}</Text>
               <div style={{ marginTop: 12 }}>
                 <Alert
@@ -249,7 +265,7 @@ export function EnterpriseReportingPage() {
                 />
               </div>
             </Card>
-            <Card className="soft-card" title="填报说明" loading={loading}>
+            <Card className="soft-card section-card" title="填报说明" loading={loading}>
               <ul style={{ margin: 0, paddingLeft: 18 }}>
                 <li>1-3 月支持上半月、下半月两个调查期。</li>
                 <li>其他月份为月度调查期。</li>

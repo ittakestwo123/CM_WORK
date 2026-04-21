@@ -74,7 +74,7 @@ export function ProvinceFilingApprovalPage() {
     <Space direction="vertical" size={16} style={{ width: "100%" }}>
       <PageTitle title="企业备案审批" desc="省级对企业备案进行查看、通过或退回。" />
       <Card
-        className="soft-card"
+        className="soft-card filter-panel"
         loading={loading}
         extra={
           <Button
@@ -155,11 +155,12 @@ export function ProvinceFilingApprovalPage() {
               title: "操作",
               render: (_, row) => (
                 <Space>
-                  <Button type="link" onClick={() => void openDetail(row.id)}>
+                  <Button size="small" onClick={() => void openDetail(row.id)}>
                     查看
                   </Button>
                   <Button
-                    type="link"
+                    size="small"
+                    type="primary"
                     onClick={async () => {
                       try {
                         await api.approveFiling(row.id);
@@ -173,7 +174,7 @@ export function ProvinceFilingApprovalPage() {
                   >
                     审核通过
                   </Button>
-                  <Button type="link" danger onClick={() => setRejectTarget(row)}>
+                  <Button size="small" danger onClick={() => setRejectTarget(row)}>
                     退回
                   </Button>
                 </Space>

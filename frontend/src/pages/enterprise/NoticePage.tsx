@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 
 import { api, type BackendNotice } from "../../api/client";
 import { PageTitle } from "../../components/common/PageTitle";
+import { StatusTag } from "../../components/common/StatusTag";
 
 const { Text } = Typography;
 
@@ -43,7 +44,7 @@ export function EnterpriseNoticePage() {
   return (
     <Space direction="vertical" style={{ width: "100%" }} size={16}>
       <PageTitle title="通知浏览" desc="查看省市下发通知及公告。" />
-      <Card className="soft-card">
+      <Card className="soft-card section-card">
         <List
           loading={loading}
           locale={{ emptyText: <Empty description="暂无通知" /> }}
@@ -54,7 +55,7 @@ export function EnterpriseNoticePage() {
                 title={item.title}
                 description={`发布时间：${new Date(item.created_at).toLocaleString()}  发布单位：${item.publisher_name}`}
               />
-              <Text type={item.read ? "secondary" : undefined}>{item.read ? "已读" : "未读"}</Text>
+              <StatusTag status={item.read ? "已读" : "未读"} />
             </List.Item>
           )}
         />

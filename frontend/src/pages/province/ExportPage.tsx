@@ -97,7 +97,7 @@ export function ProvinceExportPage() {
   return (
     <Space direction="vertical" style={{ width: "100%" }} size={16}>
       <PageTitle title="数据查询与导出" desc="支持多条件筛选与导出演示。" />
-      <Card className="soft-card" loading={loading}>
+      <Card className="soft-card filter-panel" loading={loading}>
         <Form form={form} layout="vertical">
           <Row gutter={16}>
             <Col xs={24} md={8}><Form.Item label="单位名称" name="unitName"><Input placeholder="请输入单位名称" /></Form.Item></Col>
@@ -133,7 +133,7 @@ export function ProvinceExportPage() {
         </Form>
       </Card>
 
-      <Card className="soft-card" loading={loading}>
+      <Card className="soft-card section-card" loading={loading}>
         <Table
           rowKey="report_id"
           locale={{

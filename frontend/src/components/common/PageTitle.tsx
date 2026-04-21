@@ -1,19 +1,24 @@
-import { Typography } from "antd";
+import { Space, Typography } from "antd";
+import type { ReactNode } from "react";
 
 const { Title, Text } = Typography;
 
 interface Props {
   title: string;
   desc?: string;
+  extra?: ReactNode;
 }
 
-export function PageTitle({ title, desc }: Props) {
+export function PageTitle({ title, desc, extra }: Props) {
   return (
-    <div style={{ marginBottom: 16 }}>
-      <Title level={4} style={{ marginBottom: 4 }}>
-        {title}
-      </Title>
-      {desc ? <Text type="secondary">{desc}</Text> : null}
+    <div className="page-header-block">
+      <Space direction="vertical" size={2}>
+        <Title level={4} className="page-title-text">
+          {title}
+        </Title>
+        {desc ? <Text className="page-desc-text">{desc}</Text> : null}
+      </Space>
+      {extra ? <div className="page-header-extra">{extra}</div> : null}
     </div>
   );
 }
